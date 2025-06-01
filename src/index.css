@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Đảm bảo nền của body thay đổi theo dark mode */
+body {
+  background-color: #ffffff; /* Màu nền mặc định (light mode) */
+}
+
+html.dark body {
+  background-color:rgb(3, 3, 3); /* Màu nền dark mode (cùng với dark:bg-gray-900) */
+}
+
+/* Optional: Thêm transition mượt mà */
+/* body {
+  transition: background-color 0.3s ease;
+} */
