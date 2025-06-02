@@ -10,6 +10,52 @@ html.dark body {
   background-color:rgb(3, 3, 3); /* Màu nền dark mode (cùng với dark:bg-gray-900) */
 }
 
+/* Đảm bảo toolbar và editor hiển thị đúng */
+.EasyMDEContainer .editor-toolbar {
+  display: block !important;
+  opacity: 1 !important;
+  background: #f3f4f6; /* Nền sáng cho light mode */
+  border: 1px solid #d1d5db;
+  color: #1f2937; /* Màu chữ tối */
+}
+
+.EasyMDEContainer .CodeMirror {
+  min-height: 150px;
+  background: #ffffff; /* Nền sáng cho light mode */
+  color: #1f2937; /* Màu chữ tối */
+  border: 1px solid #d1d5db;
+}
+
+/* Dark mode styles */
+.dark .EasyMDEContainer .editor-toolbar {
+  background: #374151; /* Nền tối cho toolbar */
+  border-color: #4b5563;
+  color: #ffffff; /* Màu chữ sáng */
+}
+
+.dark .EasyMDEContainer .editor-toolbar button {
+  color: #ffffff; /* Màu icon/chữ trên toolbar */
+}
+
+.dark .EasyMDEContainer .editor-toolbar button.active,
+.dark .EasyMDEContainer .editor-toolbar button:hover {
+  background: #4b5563; /* Nền khi hover hoặc active */
+}
+
+.dark .EasyMDEContainer .CodeMirror {
+  background: #1f2937; /* Nền tối cho khu vực nhập */
+  color: #ffffff; /* Màu chữ sáng */
+  border-color: #4b5563;
+}
+
+.dark .EasyMDEContainer .CodeMirror-cursor {
+  border-left-color: #ffffff; /* Màu con trỏ */
+}
+
+.dark .EasyMDEContainer .CodeMirror-selected {
+  background: #4b5563; /* Nền khi chọn văn bản */
+}
+
 /* Optional: Thêm transition mượt mà */
 /* body {
   transition: background-color 0.3s ease;

@@ -1,17 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Datetime from 'react-datetime';
 import 'react-datetime/css/react-datetime.css';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import moment from 'moment-timezone';
+import SimpleMDE from 'easymde';
+import 'easymde/dist/easymde.min.css';
+import debounce from 'lodash/debounce';
 
 const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
   const [eventData, setEventData] = useState({
-    organizer: {
-      name: '',
-      logo: null,
-      description: '',
-    },
+    organizer: { name: '', logo: null, description: '' },
     event: {
       name: '',
       location: '',
@@ -37,14 +36,19 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
   const [eventImagePreview, setEventImagePreview] = useState('');
   const [ticketImagePreview, setTicketImagePreview] = useState('');
 
+  const simpleMdeRef = useRef(null);
+  const textareaRef = useRef(null);
+
   // Get Pinata JWT from environment
   const pinataJwt = import.meta.env.VITE_PINATA_JWT;
-  if (!pinataJwt) {
-    console.error('Lỗi: VITE_PINATA_JWT không được định nghĩa trong .env. Vui lòng kiểm tra file .env.');
-    setError('Cấu hình Pinata không hợp lệ. Vui lòng kiểm tra file .env.');
-  }
+  useEffect(() => {
+    if (!pinataJwt) {
+      console.error('Lỗi: VITE_PINATA_JWT không được định nghĩa trong .env.');
+      setError('Cấu hình Pinata không hợp lệ. Vui lòng kiểm tra file .env.');
+    }
+  }, []);
 
-  // Format date to match API requirement (YYYY-MM-DDTHH:mm:ss+07:00)
+  // Format date
   const formatDate = (date) => {
     if (!date) return '';
     return moment.tz(date, 'Asia/Ho_Chi_Minh').format('YYYY-MM-DDTHH:mm:ssZ');
@@ -62,7 +66,10 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
         setError('Chỉ hỗ trợ định dạng PNG, JPEG, hoặc JPG');
         return;
       }
-      setEventData({ ...eventData, organizer: { ...eventData.organizer, logo: file } });
+      setEventData((prev) => ({
+        ...prev,
+        organizer: { ...prev.organizer, logo: file },
+      }));
       setLogoPreview(URL.createObjectURL(file));
     }
   };
@@ -79,12 +86,15 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
         setError('Chỉ hỗ trợ định dạng PNG, JPEG, hoặc JPG');
         return;
       }
-      setEventData({ ...eventData, event: { ...eventData.event, image_url: file } });
+      setEventData((prev) => ({
+        ...prev,
+        event: { ...prev.event, image_url: file },
+      }));
       setEventImagePreview(URL.createObjectURL(file));
     }
   };
-
-  // Handle file selection for ticket image
+  
+  // Handle file selection for event ticket
   const handleTicketImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -114,39 +124,30 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
         type: file.type,
       });
 
-      // Upload file to Pinata
       const formData = new FormData();
       formData.append('file', file);
       const imageRes = await axios.post('https://api.pinata.cloud/pinning/pinFileToIPFS', formData, {
         headers: {
           Authorization: `Bearer ${pinataJwt}`,
-          'Content-Type': 'multipart/form-data',
         },
       });
       const imageUrl = `https://blush-permanent-marten-312.mypinata.cloud/ipfs/${imageRes.data.IpfsHash}`;
       console.log('Tải file lên Pinata thành công:', imageUrl);
 
       if (Object.keys(metadata).length > 0) {
-        // Upload metadata to Pinata
         metadata.image = imageUrl;
         const metadataRes = await axios.post('https://api.pinata.cloud/pinning/pinJSONToIPFS', metadata, {
           headers: {
             Authorization: `Bearer ${pinataJwt}`,
-            'Content-Type': 'application/json',
           },
         });
         const metadataUrl = `https://blush-permanent-marten-312.mypinata.cloud/ipfs/${metadataRes.data.IpfsHash}`;
         console.log('Tải metadata lên Pinata thành công:', metadataUrl);
         return metadataUrl;
       }
-
       return imageUrl;
     } catch (error) {
-      console.error('Lỗi tải lên Pinata:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      console.error('Lỗi tải lên Pinata:', error);
       throw new Error(`Tải lên Pinata thất bại: ${error.message}`);
     }
   };
@@ -171,7 +172,6 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     }
 
     try {
-      // Create metadata for ticket
       const metadata = {
         name: ticketData.name,
         description: `Vé cho sự kiện ${eventData.event.name || 'Không xác định'}`,
@@ -184,7 +184,6 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
           })),
       };
 
-      // Upload ticket image and metadata
       const metadataURI = await uploadToPinata(ticketData.image, metadata);
 
       setEventData((prev) => ({
@@ -283,7 +282,6 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
       return;
     }
 
-    // Validate date range
     const startDate = moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh').toDate();
     const endDate = moment.tz(eventData.event.dateEnd, 'Asia/Ho_Chi_Minh').toDate();
     if (startDate > endDate) {
@@ -297,7 +295,6 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
 
     setIsLoading(true);
     try {
-      // Upload logo and event image to Pinata
       let logoUrl = '';
       let eventImageUrl = '';
       try {
@@ -332,7 +329,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
       };
 
       console.log('Payload gửi đến API:', JSON.stringify(payload, null, 2));
-      const response = await axios.post('http://localhost:8080/api/create_event', payload);
+      await axios.post('http://localhost:8080/api/create_event', payload);
 
       toast.success('Sự kiện được tạo thành công!', {
         position: 'top-right',
@@ -343,7 +340,6 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
         draggable: true,
       });
 
-      // Call onEventCreated to update EventManagement
       onEventCreated(payload);
 
       setEventData({
@@ -382,6 +378,65 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     return true;
   };
 
+  // Debounced update for SimpleMDE description
+  const updateDescription = debounce((value) => {
+    setEventData((prev) => {
+      console.log('Cập nhật description:', value);
+      console.log('Trạng thái trước:', prev);
+      const newState = {
+        ...prev,
+        event: { ...prev.event, description: value },
+      };
+      console.log('Trạng thái sau:', newState);
+      return newState;
+    });
+  }, 300);
+
+  // Initialize SimpleMDE for event description
+  useEffect(() => {
+    if (isOpen && textareaRef.current && !simpleMdeRef.current) {
+      console.log('Khởi tạo SimpleMDE');
+      simpleMdeRef.current = new SimpleMDE({
+        element: textareaRef.current,
+        spellChecker: false,
+        placeholder: 'Mô tả sự kiện (hỗ trợ Markdown)',
+        status: false,
+        toolbar: [
+          'bold',
+          'italic',
+          'heading',
+          '|',
+          'quote',
+          'unordered-list',
+          'ordered-list',
+          '|',
+          'link',
+          'image',
+          '|',
+          'preview',
+          'side-by-side',
+          'fullscreen',
+        ],
+      });
+
+      // Set initial value
+      simpleMdeRef.current.value(eventData.event.description || '');
+
+      // Attach change event with debounced update
+      simpleMdeRef.current.codemirror.on('change', () => {
+        updateDescription(simpleMdeRef.current.value());
+      });
+    }
+
+    return () => {
+      if (simpleMdeRef.current) {
+        console.log('Dọn dẹp SimpleMDE');
+        simpleMdeRef.current.toTextArea();
+        simpleMdeRef.current = null;
+      }
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -397,14 +452,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
               fill="none"
               viewBox="0 0 24 24"
             >
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              ></circle>
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path
                 className="opacity-75"
                 fill="currentColor"
@@ -421,7 +469,12 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
             type="text"
             placeholder="Tên đơn vị tổ chức"
             value={eventData.organizer.name}
-            onChange={(e) => setEventData({ ...eventData, organizer: { ...eventData.organizer, name: e.target.value } })}
+            onChange={(e) =>
+              setEventData((prev) => ({
+                ...prev,
+                organizer: { ...prev.organizer, name: e.target.value },
+              }))
+            }
             className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
             disabled={isLoading}
           />
@@ -434,14 +487,17 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
               className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
               disabled={isLoading}
             />
-            {logoPreview && (
-              <img src={logoPreview} alt="Logo Preview" className="mt-2 h-24 w-24 object-cover rounded" />
-            )}
+            {logoPreview && <img src={logoPreview} alt="Logo Preview" className="mt-2 h-24 w-24 object-cover rounded" />}
           </div>
           <textarea
             placeholder="Mô tả đơn vị tổ chức"
             value={eventData.organizer.description}
-            onChange={(e) => setEventData({ ...eventData, organizer: { ...eventData.organizer, description: e.target.value } })}
+            onChange={(e) =>
+              setEventData((prev) => ({
+                ...prev,
+                organizer: { ...prev.organizer, description: e.target.value },
+              }))
+            }
             className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
             disabled={isLoading}
           />
@@ -452,7 +508,12 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
             type="text"
             placeholder="Tên sự kiện"
             value={eventData.event.name}
-            onChange={(e) => setEventData({ ...eventData, event: { ...eventData.event, name: e.target.value } })}
+            onChange={(e) =>
+              setEventData((prev) => ({
+                ...prev,
+                event: { ...prev.event, name: e.target.value },
+              }))
+            }
             className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
             disabled={isLoading}
           />
@@ -460,17 +521,25 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
             type="text"
             placeholder="Địa điểm"
             value={eventData.event.location}
-            onChange={(e) => setEventData({ ...eventData, event: { ...eventData.event, location: e.target.value } })}
+            onChange={(e) =>
+              setEventData((prev) => ({
+                ...prev,
+                event: { ...prev.event, location: e.target.value },
+              }))
+            }
             className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
             disabled={isLoading}
           />
-          <textarea
-            placeholder="Mô tả sự kiện"
-            value={eventData.event.description}
-            onChange={(e) => setEventData({ ...eventData, event: { ...eventData.event, description: e.target.value } })}
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
-            disabled={isLoading}
-          />
+          <div className="flex flex-col space-y-1">
+            <label className="text-black dark:text-white text-sm sm:text-base">Mô tả sự kiện</label>
+            <textarea
+              ref={textareaRef}
+              id="event-description"
+              className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
+              style={{ minHeight: '150px' }}
+              disabled={isLoading}
+            />
+          </div>
           <div className="flex flex-col space-y-2">
             <label className="text-black dark:text-white text-sm sm:text-base">Hình ảnh sự kiện</label>
             <input
@@ -488,35 +557,61 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
             <label className="text-black dark:text-white text-sm sm:text-base">Thời gian bắt đầu</label>
             <Datetime
               value={eventData.event.dateStart ? moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh').toDate() : null}
-              onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateStart: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() } })}
+              onChange={(date) =>
+                setEventData((prev) => ({
+                  ...prev,
+                  event: { ...prev.event, dateStart: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() },
+                }))
+              }
               isValidDate={(current) => validateDates(current, true)}
-              dateFormat="DD/MM/YYYY" // Định dạng ngày tháng, ví dụ: 02/06/2025
-              timeFormat="HH:mm" // Định dạng 24 giờ, ví dụ: 18:30
+              dateFormat="DD/MM/YYYY"
+              timeFormat="HH:mm"
               inputProps={{
-                className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) ? 'border-red-500' : ''}`,
+                className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${
+                  eventData.event.dateStart &&
+                  eventData.event.dateEnd &&
+                  new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd)
+                    ? 'border-red-500'
+                    : ''
+                }`,
                 disabled: isLoading,
               }}
             />
-            {eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) && (
-              <p className="text-red-500 text-sm mt-1">Ngày bắt đầu phải trước hoặc bằng ngày kết thúc</p>
-            )}
+            {eventData.event.dateStart &&
+              eventData.event.dateEnd &&
+              new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) && (
+                <p className="text-red-500 text-sm mt-1">Ngày bắt đầu phải trước hoặc bằng ngày kết thúc</p>
+              )}
           </div>
           <div className="flex flex-col space-y-1">
             <label className="text-black dark:text-white text-sm sm:text-base">Thời gian kết thúc</label>
             <Datetime
               value={eventData.event.dateEnd ? moment.tz(eventData.event.dateEnd, 'Asia/Ho_Chi_Minh').toDate() : null}
-              onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateEnd: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() } })}
+              onChange={(date) =>
+                setEventData((prev) => ({
+                  ...prev,
+                  event: { ...prev.event, dateEnd: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() },
+                }))
+              }
               isValidDate={(current) => validateDates(current, false)}
-              dateFormat="DD/MM/YYYY" // Định dạng ngày tháng
-              timeFormat="HH:mm" // Định dạng 24 giờ
+              dateFormat="DD/MM/YYYY"
+              timeFormat="HH:mm"
               inputProps={{
-                className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) ? 'border-red-500' : ''}`,
+                className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${
+                  eventData.event.dateStart &&
+                  eventData.event.dateEnd &&
+                  new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd)
+                    ? 'border-red-500'
+                    : ''
+                }`,
                 disabled: isLoading,
               }}
             />
-            {eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) && (
-              <p className="text-red-500 text-sm mt-1">Ngày kết thúc phải sau hoặc bằng ngày bắt đầu</p>
-            )}
+            {eventData.event.dateStart &&
+              eventData.event.dateEnd &&
+              new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) && (
+                <p className="text-red-500 text-sm mt-1">Ngày kết thúc phải sau hoặc bằng ngày bắt đầu</p>
+              )}
           </div>
 
           {/* Ticket Types */}
@@ -524,7 +619,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
             <h4 className="text-lg font-semibold text-black dark:text-white mb-2">Loại vé</h4>
             <button
               onClick={() => setIsTicketDialogOpen(true)}
-              className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-2 text-sm sm:text-base disabled:opacity-50"
+              className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 mt-2 sm:text-base disabled:opacity-50"
               disabled={isLoading}
             >
               Thêm loại vé
@@ -539,12 +634,12 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                       placeholder="Tên loại vé"
                       value={ticket.name}
                       onChange={(e) =>
-                        setEventData({
-                          ...eventData,
-                          ticketTypes: eventData.ticketTypes.map((t, i) =>
+                        setEventData((prev) => ({
+                          ...prev,
+                          ticketTypes: prev.ticketTypes.map((t, i) =>
                             i === index ? { ...t, name: e.target.value } : t
                           ),
-                        })
+                        }))
                       }
                       className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                       disabled={isLoading}
@@ -555,12 +650,12 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                       placeholder="Giá vé (ETH)"
                       value={ticket.price}
                       onChange={(e) =>
-                        setEventData({
-                          ...eventData,
-                          ticketTypes: eventData.ticketTypes.map((t, i) =>
+                        setEventData((prev) => ({
+                          ...prev,
+                          ticketTypes: prev.ticketTypes.map((t, i) =>
                             i === index ? { ...t, price: e.target.value } : t
                           ),
-                        })
+                        }))
                       }
                       className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                       disabled={isLoading}
@@ -570,12 +665,12 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                       placeholder="Số lượng vé"
                       value={ticket.amount}
                       onChange={(e) =>
-                        setEventData({
-                          ...eventData,
-                          ticketTypes: eventData.ticketTypes.map((t, i) =>
+                        setEventData((prev) => ({
+                          ...prev,
+                          ticketTypes: prev.ticketTypes.map((t, i) =>
                             i === index ? { ...t, amount: parseInt(e.target.value) } : t
                           ),
-                        })
+                        }))
                       }
                       className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                       disabled={isLoading}
@@ -672,7 +767,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                 type="text"
                 placeholder="Tên loại vé"
                 value={ticketData.name}
-                onChange={(e) => setTicketData({ ...ticketData, name: e.target.value })}
+                onChange={(e) => setTicketData((prev) => ({ ...prev, name: e.target.value }))}
                 className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                 disabled={isLoading}
               />
@@ -681,7 +776,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                 step="0.001"
                 placeholder="Giá vé (ETH)"
                 value={ticketData.price}
-                onChange={(e) => setTicketData({ ...ticketData, price: e.target.value })}
+                onChange={(e) => setTicketData((prev) => ({ ...prev, price: e.target.value }))}
                 className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                 disabled={isLoading}
               />
@@ -689,7 +784,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                 type="number"
                 placeholder="Số lượng vé"
                 value={ticketData.amount}
-                onChange={(e) => setTicketData({ ...ticketData, amount: e.target.value })}
+                onChange={(e) => setTicketData((prev) => ({ ...prev, amount: e.target.value }))}
                 className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                 disabled={isLoading}
               />
@@ -719,7 +814,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                       onChange={(e) => {
                         const newBenefits = [...ticketData.benefits];
                         newBenefits[index] = e.target.value;
-                        setTicketData({ ...ticketData, benefits: newBenefits });
+                        setTicketData((prev) => ({ ...prev, benefits: newBenefits }));
                       }}
                       className="w-full sm:w-auto flex-1 p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                       disabled={isLoading}
@@ -727,7 +822,10 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                     <button
                       onClick={() => {
                         const newBenefits = ticketData.benefits.filter((_, i) => i !== index);
-                        setTicketData({ ...ticketData, benefits: newBenefits.length ? newBenefits : [''] });
+                        setTicketData((prev) => ({
+                          ...prev,
+                          benefits: newBenefits.length ? newBenefits : [''],
+                        }));
                       }}
                       className="w-full sm:w-auto px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm sm:text-base disabled:opacity-50"
                       disabled={isLoading}
@@ -737,7 +835,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
                   </div>
                 ))}
                 <button
-                  onClick={() => setTicketData({ ...ticketData, benefits: [...ticketData.benefits, ''] })}
+                  onClick={() => setTicketData((prev) => ({ ...prev, benefits: [...prev.benefits, ''] }))}
                   className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm sm:text-base disabled:opacity-50"
                   disabled={isLoading}
                 >
