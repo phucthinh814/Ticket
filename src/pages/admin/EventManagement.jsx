@@ -1,15 +1,15 @@
-import { featuredEvents } from '../../data/eventsData';
 import React, { useState } from 'react';
 import CreateEventDialog from './CreateEventDialog';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { featuredEvents } from '../../data/eventsData';
 
 const EventManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [events, setEvents] = useState(featuredEvents); // Make events stateful
+  const [events, setEvents] = useState(featuredEvents);
   const eventsPerPage = 4;
 
   // Calculate total pages
@@ -21,80 +21,56 @@ const EventManagement = () => {
   const currentEvents = events.slice(indexOfFirstEvent, indexOfLastEvent);
 
   // Handle page navigation
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
+  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
+  const handlePreviousPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
+  const handleNextPage = () => currentPage < totalPages && setCurrentPage(currentPage + 1);
 
   // Generate page numbers
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
-  }
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
 
-  // Handle dialog open/close
-  const handleOpenDialog = () => {
-    setIsDialogOpen(true);
-  };
+  // Handle dialog
+  const handleOpenDialog = () => setIsDialogOpen(true);
+  const handleCloseDialog = () => setIsDialogOpen(false);
 
-  const handleCloseDialog = () => {
-    setIsDialogOpen(false);
-  };
-
-  // Callback to handle new event creation
+  // Handle new event creation
   const handleEventCreated = (newEvent) => {
     setEvents((prevEvents) => [
       ...prevEvents,
       {
-        id: prevEvents.length + 1, // Temporary ID; ideally, use blockchain event ID
-        name: newEvent.name, // Sử dụng 'name' thay vì 'title'
-        startTime: newEvent.startTime.toLocaleString(), // Format as needed, thay 'time'
-        location: newEvent.location,
-        ticketTypes: newEvent.ticketTypes.map((ticket) => ({
-          name: ticket.name,
-          price: Number(ticket.price) / 1e18, // Convert from Wei
-          available: ticket.quantity > 0,
-          quantity: ticket.quantity,
-          benefits: ticket.benefits || [],
-          image: ticket.image || '',
-        })),
+        id: prevEvents.length + 1,
+        name: newEvent.event.name,
+        startTime: newEvent.event.dateStart,
+        location: newEvent.event.location,
         organizers: [
           {
-            id: 0, // Placeholder ID for new event organizer
-            logo: "", // Placeholder logo
-            name: "Tổ chức mới", // Placeholder name
-            description: "Ban tổ chức mới được tạo.", // Placeholder description
+            id: 0,
+            logo: newEvent.organizer.logo,
+            name: newEvent.organizer.name,
+            description: newEvent.organizer.description,
           },
         ],
+        ticketTypes: newEvent.ticketTypes.map((ticket) => ({
+          name: ticket.name,
+          price: parseFloat(ticket.price),
+          available: ticket.amount > 0,
+          quantity: parseInt(ticket.amount),
+          metadataURI: ticket.metadataURI,
+        })),
       },
     ]);
-    setCurrentPage(1); // Reset to first page to show new event
+    setCurrentPage(1);
   };
 
   // Pagination button class
-  const getPageButtonClass = (number) => {
-    return `px-3 py-1 mx-1 rounded-md transition-colors ${
+  const getPageButtonClass = (number) =>
+    `px-3 py-1 mx-1 rounded-md transition-colors ${
       currentPage === number ? 'bg-blue-500 text-white' : 'bg-gray-300 text-black hover:bg-gray-400'
     }`.trim();
-  };
 
   return (
     <div className="p-6 mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-black dark:text-white">
-          Quản lý sự kiện
-        </h2>
+        <h2 className="text-2xl font-bold text-black dark:text-white">Quản lý sự kiện</h2>
         <button
           className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
           onClick={handleOpenDialog}
@@ -104,7 +80,7 @@ const EventManagement = () => {
       </div>
 
       {/* Desktop table */}
-      <div className="md:block hidden">
+      <div className="hidden md:block">
         <table className="w-full table-auto border-collapse bg-white dark:bg-gray-800 rounded-lg shadow-md">
           <thead>
             <tr className="bg-gray-100 dark:bg-gray-700">
@@ -118,27 +94,14 @@ const EventManagement = () => {
           </thead>
           <tbody>
             {currentEvents.map((event) => (
-              <tr key={event.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="px-4 py-2 text-black dark:text-white">{event.id}</td>
-                <td className="px-4 py-2 text-black dark:text-white">{event.name}</td> {/* Thay 'title' bằng 'name' */}
-                <td className="px-4 py-2 text-black dark:text-white">{event.startTime}</td> {/* Thay 'time' bằng 'startTime' */}
-                <td className="px-4 py-2 text-black dark:text-white">{event.location}</td>
-                <td className="px-4 py-2 text-black dark:text-white">{event.organizers[0]?.name || 'Chưa có'}</td>
-                <td className="px-4 py-2">
-                  {event.ticketTypes.some((ticket) => ticket.available) ? (
-                    <span className="text-green-500">Còn vé</span>
-                  ) : (
-                    <span className="text-red-500">Hết vé</span>
-                  )}
-                </td>
-              </tr>
+              <tr key={event.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"><td className="px-4 py-2 text-black dark:text-white">{event.id}</td><td className="px-4 py-2 text-black dark:text-white">{event.name}</td><td className="px-4 py-2 text-black dark:text-white">{event.startTime}</td><td className="px-4 py-2 text-black dark:text-white">{event.location}</td><td className="px-4 py-2 text-black dark:text-white">{event.organizers[0]?.name || 'Chưa có'}</td><td className="px-4 py-2">{event.ticketTypes.some((ticket) => ticket.available) ? (<span className="text-green-500">Còn vé</span>) : (<span className="text-red-500">Hết vé</span>)}</td></tr>
             ))}
           </tbody>
         </table>
       </div>
 
       {/* Mobile layout */}
-      <div className="md:hidden block">
+      <div className="block md:hidden">
         {currentEvents.map((event) => (
           <div
             key={event.id}
@@ -150,12 +113,12 @@ const EventManagement = () => {
                 <span className="text-black dark:text-white">{event.id}</span>
               </div>
               <div className="flex">
-                <span className="font-semibold text-black dark:text-white w-28">Tiêu đề:</span>
-                <span className="text-black dark:text-white">{event.name}</span> {/* Thay 'title' bằng 'name' */}
+                <span className="font-semibold text-black dark:text-white w-28">Tên sự kiện:</span>
+                <span className="text-black dark:text-white">{event.name}</span>
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Thời gian:</span>
-                <span className="text-black dark:text-white">{event.startTime}</span> {/* Thay 'time' bằng 'startTime' */}
+                <span className="text-black dark:text-white">{event.startTime}</span>
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Địa điểm:</span>
@@ -165,7 +128,6 @@ const EventManagement = () => {
                 <span className="font-semibold text-black dark:text-white w-28">Ban Tổ Chức:</span>
                 <span className="text-black dark:text-white">{event.organizers[0]?.name || 'Chưa có'}</span>
               </div>
-             
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Trạng thái:</span>
                 <span className={event.ticketTypes.some((ticket) => ticket.available) ? 'text-green-500' : 'text-red-500'}>
@@ -204,7 +166,6 @@ const EventManagement = () => {
         </button>
       </div>
 
-      {/* ToastContainer with customized props */}
       <ToastContainer
         position="top-right"
         autoClose={2000}
@@ -218,7 +179,6 @@ const EventManagement = () => {
         theme="light"
       />
 
-      {/* CreateEventDialog with onEventCreated callback */}
       <CreateEventDialog
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
