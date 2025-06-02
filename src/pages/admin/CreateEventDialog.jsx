@@ -3,6 +3,7 @@ import Datetime from 'react-datetime';
 import 'react-datetime/css/react-datetime.css';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import moment from 'moment-timezone';
 
 const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
   const [eventData, setEventData] = useState({
@@ -43,17 +44,10 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     setError('Cấu hình Pinata không hợp lệ. Vui lòng kiểm tra file .env.');
   }
 
-  // Format date to match API requirement (YYYY-MM-DDTHH:mm:ss)
+  // Format date to match API requirement (YYYY-MM-DDTHH:mm:ss+07:00)
   const formatDate = (date) => {
     if (!date) return '';
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    return moment.tz(date, 'Asia/Ho_Chi_Minh').format('YYYY-MM-DDTHH:mm:ssZ');
   };
 
   // Handle file selection for logo
@@ -289,6 +283,18 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
       return;
     }
 
+    // Validate date range
+    const startDate = moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh').toDate();
+    const endDate = moment.tz(eventData.event.dateEnd, 'Asia/Ho_Chi_Minh').toDate();
+    if (startDate > endDate) {
+      setError('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
+      toast.error('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Upload logo and event image to Pinata
@@ -363,6 +369,17 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Validate dates on change
+  const validateDates = (currentDate, isStartDate) => {
+    if (isStartDate && eventData.event.dateEnd) {
+      return moment(currentDate).tz('Asia/Ho_Chi_Minh').toDate() <= moment(eventData.event.dateEnd).tz('Asia/Ho_Chi_Minh').toDate();
+    }
+    if (!isStartDate && eventData.event.dateStart) {
+      return moment(currentDate).tz('Asia/Ho_Chi_Minh').toDate() >= moment(eventData.event.dateStart).tz('Asia/Ho_Chi_Minh').toDate();
+    }
+    return true;
   };
 
   if (!isOpen) return null;
@@ -470,24 +487,32 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
           <div className="flex flex-col space-y-1">
             <label className="text-black dark:text-white text-sm sm:text-base">Thời gian bắt đầu</label>
             <Datetime
-              value={eventData.event.dateStart}
-              onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateStart: date.toDate() } })}
+              value={eventData.event.dateStart ? moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh').toDate() : null}
+              onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateStart: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() } })}
+              isValidDate={(current) => validateDates(current, true)}
               inputProps={{
-                className: 'w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base',
+                className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) ? 'border-red-500' : ''}`,
                 disabled: isLoading,
               }}
             />
+            {eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) && (
+              <p className="text-red-500 text-sm mt-1">Ngày bắt đầu phải trước hoặc bằng ngày kết thúc</p>
+            )}
           </div>
           <div className="flex flex-col space-y-1">
             <label className="text-black dark:text-white text-sm sm:text-base">Thời gian kết thúc</label>
             <Datetime
-              value={eventData.event.dateEnd}
-              onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateEnd: date.toDate() } })}
+              value={eventData.event.dateEnd ? moment.tz(eventData.event.dateEnd, 'Asia/Ho_Chi_Minh').toDate() : null}
+              onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateEnd: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() } })}
+              isValidDate={(current) => validateDates(current, false)}
               inputProps={{
-                className: 'w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base',
+                className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) ? 'border-red-500' : ''}`,
                 disabled: isLoading,
               }}
             />
+            {eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) && (
+              <p className="text-red-500 text-sm mt-1">Ngày kết thúc phải sau hoặc bằng ngày bắt đầu</p>
+            )}
           </div>
 
           {/* Ticket Types */}
