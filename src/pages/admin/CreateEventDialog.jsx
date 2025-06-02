@@ -490,6 +490,8 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
               value={eventData.event.dateStart ? moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh').toDate() : null}
               onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateStart: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() } })}
               isValidDate={(current) => validateDates(current, true)}
+              dateFormat="DD/MM/YYYY" // Định dạng ngày tháng, ví dụ: 02/06/2025
+              timeFormat="HH:mm" // Định dạng 24 giờ, ví dụ: 18:30
               inputProps={{
                 className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) ? 'border-red-500' : ''}`,
                 disabled: isLoading,
@@ -505,6 +507,8 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
               value={eventData.event.dateEnd ? moment.tz(eventData.event.dateEnd, 'Asia/Ho_Chi_Minh').toDate() : null}
               onChange={(date) => setEventData({ ...eventData, event: { ...eventData.event, dateEnd: moment.tz(date, 'Asia/Ho_Chi_Minh').toDate() } })}
               isValidDate={(current) => validateDates(current, false)}
+              dateFormat="DD/MM/YYYY" // Định dạng ngày tháng
+              timeFormat="HH:mm" // Định dạng 24 giờ
               inputProps={{
                 className: `w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base ${eventData.event.dateStart && eventData.event.dateEnd && new Date(eventData.event.dateStart) > new Date(eventData.event.dateEnd) ? 'border-red-500' : ''}`,
                 disabled: isLoading,
