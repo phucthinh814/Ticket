@@ -19,9 +19,18 @@ import { WalletContext } from './context/WalletContext'; // Đảm bảo đườ
 import { useContext } from 'react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import {  useState, useEffect } from 'react';
 const AdminRoute = ({ children }) => {
   const { walletAddress, connectWallet } = useContext(WalletContext);
+  const [role, setRole] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Lấy role từ localStorage hoặc set null
+    const savedRole = localStorage.getItem('role');
+    setRole(savedRole);
+    setLoading(false);
+  }, []);
 
   if (!walletAddress) {
     const handleConnectWallet = async () => {
@@ -50,6 +59,27 @@ const AdminRoute = ({ children }) => {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-500">Đang kiểm tra quyền truy cập...</p>
+      </div>
+    );
+  }
+
+  if (role !== 'ADMIN') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+        <div className="text-center p-4 max-w-md mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">
+            Bạn không có quyền truy cập trang Admin
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Nếu đã kết nối và role là ADMIN mới cho vào AdminLayout
   return <AdminLayout walletAddress={walletAddress}>{children}</AdminLayout>;
 };
 
