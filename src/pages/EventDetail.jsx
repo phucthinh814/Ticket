@@ -8,27 +8,83 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import SpecialEvents from '../components/SpecialEvents';
 import { featuredEvents, locations } from '../data/eventsData';
 import { WalletContext } from '../context/WalletContext';
 import { ThemeContext } from '../context/ThemeContext';
+import 'easymde/dist/easymde.min.css'; // Import SimpleMDE CSS for consistency
 
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  // const { isDarkMode } = useContext(ThemeContext);
+  const { connectWallet, checkConnectionStatus } = useContext(WalletContext);
   const [event, setEvent] = useState(null);
+  const [ticketTypes, setTicketTypes] = useState([]);
   const [showDescription, setShowDescription] = useState(false);
   const [openTicketIndex, setOpenTicketIndex] = useState(null);
-  const { connectWallet, checkConnectionStatus } = useContext(WalletContext);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Tải thông tin sự kiện
+  // Fetch event and ticket types
   useEffect(() => {
-    const selectedEvent = featuredEvents.find((e) => e.id === parseInt(id));
-    setEvent(selectedEvent);
+    const fetchEventData = async () => {
+      try {
+        // Fetch event details
+        const eventResponse = await fetch(`http://localhost:8080/api/events/${id}`);
+        if (!eventResponse.ok) {
+          throw new Error('Failed to fetch event details');
+        }
+        const eventData = await eventResponse.json();
+
+        // Fetch ticket types
+        const ticketResponse = await fetch(`http://localhost:8080/api/ticket-types/event/${id}`);
+        if (!ticketResponse.ok) {
+          throw new Error('Failed to fetch ticket types');
+        }
+        const ticketData = await ticketResponse.json();
+
+        // Map event data
+        const mappedEvent = {
+          id: eventData.eventId,
+          name: eventData.eventName,
+          description: eventData.description,
+          image: eventData.imageUrl || 'https://via.placeholder.com/300x480?text=Fallback+Image',
+          location: eventData.location,
+          startTime: eventData.dateStart,
+          endTime: eventData.dateEnd,
+          organizers: [
+            {
+              name: eventData.organizerName,
+              logo: eventData.logo || 'https://via.placeholder.com/100x100?text=Organizer+Logo',
+              description: 'Ban tổ chức sự kiện âm nhạc và công nghệ hàng đầu.',
+            },
+          ],
+        };
+
+        // Map ticket types
+        const mappedTicketTypes = ticketData.map((ticket) => ({
+          name: ticket.name,
+          price: ticket.price, // Keep price in ETH
+          available: ticket.remainingAmount > 0,
+          benefits: ticket.benefits || [], // Default to empty array if benefits is null
+        }));
+
+        setEvent(mappedEvent);
+        setTicketTypes(mappedTicketTypes);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Không thể tải dữ liệu sự kiện. Vui lòng thử lại sau.');
+        setLoading(false);
+      }
+    };
+
+    fetchEventData();
   }, [id]);
 
-  // Xử lý nhấn nút "Mua vé ngay"
+  // Handle "Mua vé ngay" button
   const handleBuyTicket = async () => {
     const isActuallyConnected = await checkConnectionStatus();
     if (!isActuallyConnected) {
@@ -48,15 +104,34 @@ const EventDetail = () => {
     setOpenTicketIndex(openTicketIndex === index ? null : index);
   };
 
-  if (!event) return <div className="text-center py-10 text-gray-700 dark:text-gray-300">Đang tải sự kiện...</div>;
-
-  // Format thời gian từ startTime và endTime
+  // Format time range from ISO date strings
   const formatTimeRange = () => {
-    const start = event.startTime.split(' ')[1]; // Lấy giờ từ "15/6/2025 20:00" -> "20:00"
-    const end = event.endTime.split(' ')[1]; // Lấy giờ từ "15/6/2025 23:00" -> "23:00"
-    const date = event.startTime.split(' ')[0]; // Lấy ngày từ "15/6/2025 20:00" -> "15/6/2025"
-    return `${start} - ${end}, ngày ${date}`;
+    if (!event || !event.startTime || !event.endTime) return '';
+    const startDate = new Date(event.startTime);
+    const endDate = new Date(event.endTime);
+    const formatTime = (date) => date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const formatDate = (date) => date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const startTime = formatTime(startDate);
+    const endTime = formatTime(endDate);
+    const date = formatDate(startDate);
+    return `${startTime} - ${endTime}, ngày ${date}`;
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-black min-h-screen flex items-center justify-center text-black dark:text-white">
+        <p>Đang tải...</p>
+      </div>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <div className="bg-white dark:bg-black min-h-screen flex items-center justify-center text-black dark:text-white">
+        <p>{error || 'Sự kiện không tồn tại.'}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-black text-white min-h-screen">
@@ -65,7 +140,15 @@ const EventDetail = () => {
         <div className="bg-gray-900 dark:bg-gray-800 rounded-2xl p-4">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="w-full md:w-2/3 rounded-lg overflow-hidden">
-              <img src={event.image} alt={event.name} className="w-full h-[400px] object-cover rounded-lg" />
+              <img
+                src={event.image}
+                alt={event.name}
+                className="w-full h-[400px] object-cover rounded-lg"
+                onError={(e) => {
+                  console.error('Image failed to load:', event.image);
+                  e.target.src = 'https://via.placeholder.com/300x480?text=Fallback+Image';
+                }}
+              />
             </div>
             <div className="bg-gray-800 dark:bg-gray-700 p-6 rounded-lg w-full md:w-1/3">
               <h2 className="text-xl font-bold mb-4 text-white">{event.name}</h2>
@@ -97,7 +180,11 @@ const EventDetail = () => {
               {showDescription ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </button>
           </div>
-          {showDescription && <p className="mt-2 text-gray-700 dark:text-gray-300">{event.description}</p>}
+          {showDescription && (
+            <div className="mt-2 text-gray-700 dark:text-gray-300">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
+            </div>
+          )}
         </div>
 
         {/* Thông tin vé */}
@@ -115,7 +202,7 @@ const EventDetail = () => {
             <CalendarTodayIcon fontSize="small" /> {formatTimeRange()}
           </p>
 
-          {event.ticketTypes.map((ticket, index) => (
+          {ticketTypes.map((ticket, index) => (
             <div key={index} className="border-b border-gray-700 dark:border-gray-600 py-4">
               <div
                 onClick={() => toggleTicket(index)}
@@ -127,7 +214,7 @@ const EventDetail = () => {
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
                   <span className={`${ticket.available ? 'text-green-400' : 'text-white'}`}>
-                    {ticket.price.toLocaleString()} đ
+                    {ticket.price} ETH
                   </span>
                   <span
                     className={`px-3 py-1 rounded-full font-medium text-white text-xs ${
@@ -141,18 +228,15 @@ const EventDetail = () => {
 
               {openTicketIndex === index && (
                 <div className="mt-4 bg-gray-800 dark:bg-gray-700 p-4 rounded text-sm text-gray-300 dark:text-gray-200">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    {ticket.image && (
-                      <div className="md:w-1/3 w-full">
-                        <img src={ticket.image} alt={ticket.name} className="rounded shadow w-full object-cover" />
-                      </div>
-                    )}
-                    <ul className="list-disc list-inside space-y-1 md:w-2/3">
+                  {ticket.benefits.length > 0 ? (
+                    <ul className="list-disc list-inside space-y-1">
                       {ticket.benefits.map((benefit, idx) => (
                         <li key={idx}>{benefit}</li>
                       ))}
                     </ul>
-                  </div>
+                  ) : (
+                    <p>Loại vé không có lợi ích</p>
+                  )}
                 </div>
               )}
             </div>
@@ -168,6 +252,10 @@ const EventDetail = () => {
                 src={organizer.logo}
                 alt={`${organizer.name} logo`}
                 className="w-20 h-20 object-contain rounded"
+                onError={(e) => {
+                  console.error('Organizer logo failed to load:', organizer.logo);
+                  e.target.src = 'https://via.placeholder.com/100x100?text=Organizer+Logo';
+                }}
               />
               <div>
                 <h4 className="text-md font-medium text-black dark:text-white">{organizer.name}</h4>
@@ -185,12 +273,19 @@ const EventDetail = () => {
           <h2 className="text-xl font-semibold mb-4">Điểm đến thú vị</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {locations.map((location, index) => (
-              <div key={index} className="bg-white dark:bg-gray-800 text-black dark:text-white rounded-2xl overflow-hidden shadow-lg h-[350px] relative">
+              <div
+                key={index}
+                className="bg-white dark:bg-gray-800 text-black dark:text-white rounded-2xl overflow-hidden shadow-lg h-[350px] relative"
+              >
                 <div className="relative w-full h-full">
                   <img
                     src={location.image}
                     alt={location.title}
                     className="w-full h-full object-cover rounded-2xl"
+                    onError={(e) => {
+                      console.error('Location image failed to load:', location.image);
+                      e.target.src = 'https://via.placeholder.com/300x350?text=Fallback+Image';
+                    }}
                   />
                   <div className="absolute bottom-0 left-0 w-full bg-opacity-60 p-4">
                     <h3 className="text-2xl font-semibold text-white">{location.title}</h3>

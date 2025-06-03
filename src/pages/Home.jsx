@@ -1,26 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import SpecialEvents from '../components/SpecialEvents';
-import { featuredEvents, locations } from '../data/eventsData';
 import RecommendedEvents from '../components/RecommendedEvents';
+import { locations } from '../data/eventsData';
+
 const Home = () => {
   const [currentPage, setCurrentPage] = useState(0);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  console.log('Featured Events:', featuredEvents);
-  console.log('Locations:', locations);
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/events');
+        if (!response.ok) {
+          throw new Error('Failed to fetch events');
+        }
+        const data = await response.json();
+        // Map API data to match expected structure
+        const mappedEvents = data.map(event => ({
+          id: event.event_id,
+          name: event.event_name,
+          description: event.description,
+          image: event.image_url,
+          location: event.location,
+          date_start: event.date_start,
+          date_end: event.date_end,
+          status: event.status,
+        }));
+        setEvents(mappedEvents);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching events:', err);
+        setError('Không thể tải dữ liệu sự kiện. Vui lòng thử lại sau.');
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   const eventsPerPage = 2;
-  const totalPages = Math.ceil(featuredEvents.length / eventsPerPage);
-
+  const totalPages = Math.ceil(events.length / eventsPerPage);
   const startIndex = currentPage * eventsPerPage;
-  const currentEvents = featuredEvents.slice(startIndex, startIndex + eventsPerPage);
+  const currentEvents = events.slice(startIndex, startIndex + eventsPerPage);
 
   const handleDotClick = (pageIndex) => {
     setCurrentPage(pageIndex);
   };
 
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-black min-h-screen flex items-center justify-center text-black dark:text-white">
+        <p>Đang tải...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-black min-h-screen flex items-center justify-center text-black dark:text-white">
+        <p>{error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white dark:bg-black min-h-screen text-black dark:text-white ">
+    <div className="bg-white dark:bg-black min-h-screen text-black dark:text-white">
       {/* Sự kiện nổi bật */}
       <section className="max-w-7xl mx-auto px-4 py-8">
         <h2 className="text-xl font-semibold mb-4 text-black dark:text-white">Sự kiện nổi bật</h2>
@@ -70,10 +118,10 @@ const Home = () => {
       </section>
 
       {/* Special Events */}
-      <SpecialEvents events={featuredEvents} />
+      <SpecialEvents events={events} />
 
       {/* Dành cho bạn */}
-      <RecommendedEvents events={featuredEvents} />
+      <RecommendedEvents events={events} />
 
       {/* Điểm đến thú vị */}
       <section className="max-w-7xl mx-auto px-4 py-8">

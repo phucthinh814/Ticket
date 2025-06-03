@@ -1,16 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import CreateEventDialog from './CreateEventDialog';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { featuredEvents } from '../../data/eventsData';
 
 const EventManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [events, setEvents] = useState(featuredEvents);
-  const eventsPerPage = 4;
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const eventsPerPage = 10;
+
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:8080/api/events');
+        if (!response.ok) {
+          throw new Error('Failed to fetch events');
+        }
+        const data = await response.json();
+        // Map API data to the required structure
+        const mappedEvents = data.map((event) => ({
+          id: event.event_id,
+          name: event.event_name,
+          startTime: event.date_start,
+          location: event.location,
+          description: event.description,
+          status: event.status,
+          image_url: event.image_url,
+        }));
+        setEvents(mappedEvents);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   // Calculate total pages
   const totalPages = Math.ceil(events.length / eventsPerPage);
@@ -41,24 +72,17 @@ const EventManagement = () => {
         name: newEvent.event.name,
         startTime: newEvent.event.dateStart,
         location: newEvent.event.location,
-        organizers: [
-          {
-            id: 0,
-            logo: newEvent.organizer.logo,
-            name: newEvent.organizer.name,
-            description: newEvent.organizer.description,
-          },
-        ],
-        ticketTypes: newEvent.ticketTypes.map((ticket) => ({
-          name: ticket.name,
-          price: parseFloat(ticket.price),
-          available: ticket.amount > 0,
-          quantity: parseInt(ticket.amount),
-          metadataURI: ticket.metadataURI,
-        })),
+        description: newEvent.event.description || 'No description',
+        status: 'UPCOMING',
+        image_url: newEvent.event.image_url || 'https://example.com/default.jpg',
       },
     ]);
     setCurrentPage(1);
+  };
+
+  // Shorten description
+  const shortenDescription = (description) => {
+    return description.length > 50 ? `${description.slice(0, 50)}...` : description;
   };
 
   // Pagination button class
@@ -66,6 +90,14 @@ const EventManagement = () => {
     `px-3 py-1 mx-1 rounded-md transition-colors ${
       currentPage === number ? 'bg-blue-500 text-white' : 'bg-gray-300 text-black hover:bg-gray-400'
     }`.trim();
+
+  if (loading) {
+    return <div className="p-6 text-center text-black dark:text-white">Đang tải...</div>;
+  }
+
+  if (error) {
+    return <div className="p-6 text-center text-red-500">Lỗi: {error}</div>;
+  }
 
   return (
     <div className="p-6 mx-auto">
@@ -88,13 +120,33 @@ const EventManagement = () => {
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Tên sự kiện</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Thời gian</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Địa điểm</th>
-              <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Ban Tổ Chức</th>
+              <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Mô tả</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Trạng thái</th>
             </tr>
           </thead>
           <tbody>
             {currentEvents.map((event) => (
-              <tr key={event.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"><td className="px-4 py-2 text-black dark:text-white">{event.id}</td><td className="px-4 py-2 text-black dark:text-white">{event.name}</td><td className="px-4 py-2 text-black dark:text-white">{event.startTime}</td><td className="px-4 py-2 text-black dark:text-white">{event.location}</td><td className="px-4 py-2 text-black dark:text-white">{event.organizers[0]?.name || 'Chưa có'}</td><td className="px-4 py-2">{event.ticketTypes.some((ticket) => ticket.available) ? (<span className="text-green-500">Còn vé</span>) : (<span className="text-red-500">Hết vé</span>)}</td></tr>
+              <tr
+                key={event.id}
+                className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                <td className="px-4 py-2 text-black dark:text-white">{event.id}</td>
+                <td className="px-4 py-2 text-black dark:text-white">{event.name}</td>
+                <td className="px-4 py-2 text-black dark:text-white">
+                  {new Date(event.startTime).toLocaleString()}
+                </td>
+                <td className="px-4 py-2 text-black dark:text-white">{event.location}</td>
+                <td className="px-4 py-2 text-black dark:text-white">
+                  {shortenDescription(event.description)}
+                </td>
+                <td className="px-4 py-2">
+                  <span
+                    className={event.status === 'UPCOMING' ? 'text-green-500' : 'text-red-500'}
+                  >
+                    {event.status}
+                  </span>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -118,20 +170,26 @@ const EventManagement = () => {
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Thời gian:</span>
-                <span className="text-black dark:text-white">{event.startTime}</span>
+                <span className="text-black dark:text-white">
+                  {new Date(event.startTime).toLocaleString()}
+                </span>
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Địa điểm:</span>
                 <span className="text-black dark:text-white">{event.location}</span>
               </div>
               <div className="flex">
-                <span className="font-semibold text-black dark:text-white w-28">Ban Tổ Chức:</span>
-                <span className="text-black dark:text-white">{event.organizers[0]?.name || 'Chưa có'}</span>
+                <span className="font-semibold text-black dark:text-white w-28">Mô tả:</span>
+                <span className="text-black dark:text-white">
+                  {shortenDescription(event.description)}
+                </span>
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Trạng thái:</span>
-                <span className={event.ticketTypes.some((ticket) => ticket.available) ? 'text-green-500' : 'text-red-500'}>
-                  {event.ticketTypes.some((ticket) => ticket.available) ? 'Còn vé' : 'Hết vé'}
+                <span
+                  className={event.status === 'UPCOMING' ? 'text-green-500' : 'text-red-500'}
+                >
+                  {event.status}
                 </span>
               </div>
             </div>
