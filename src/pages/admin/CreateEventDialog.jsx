@@ -367,17 +367,23 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     }
   };
 
-  // Validate dates on change
-  const validateDates = (currentDate, isStartDate) => {
-    if (isStartDate && eventData.event.dateEnd) {
-      return moment(currentDate).tz('Asia/Ho_Chi_Minh').toDate() <= moment(eventData.event.dateEnd).tz('Asia/Ho_Chi_Minh').toDate();
-    }
-    if (!isStartDate && eventData.event.dateStart) {
-      return moment(currentDate).tz('Asia/Ho_Chi_Minh').toDate() >= moment(eventData.event.dateStart).tz('Asia/Ho_Chi_Minh').toDate();
-    }
+const validateDates = (currentDate, isStartDate) => {
+  const current = moment.tz(currentDate, 'Asia/Ho_Chi_Minh');
+  
+  if (isStartDate && eventData.event.dateEnd) {
+    // Khi chọn ngày bắt đầu, không cần giới hạn ngày dựa trên ngày kết thúc
+    // Có thể thêm logic nếu bạn muốn không cho chọn ngày trong quá khứ
     return true;
-  };
-
+  }
+  
+  if (!isStartDate && eventData.event.dateStart) {
+    const startDate = moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh');
+    // Vô hiệu hóa các ngày trước ngày bắt đầu (ví dụ: trước 28/06/2025)
+    return current.isSameOrAfter(startDate, 'day');
+  }
+  
+  return true;
+};
   // Debounced update for SimpleMDE description
   const updateDescription = debounce((value) => {
     setEventData((prev) => {
