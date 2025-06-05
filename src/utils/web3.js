@@ -1,223 +1,96 @@
 import Web3 from 'web3';
 
-const EVENT_MANAGER_ADDRESS = '0x68697C799cA9A09b2896C246CBD614980b6C810E';
-
-const eventManagerABI = [
+const contractABI = [
   {
     "inputs": [
-      { "internalType": "uint256", "name": "eventId", "type": "uint256" },
-      { "internalType": "uint256[]", "name": "ticketTypeIds", "type": "uint256[]" },
-      { "internalType": "uint256[]", "name": "quantities", "type": "uint256[]" }
+      {
+        "internalType": "uint256",
+        "name": "eventId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "ticketTypeIds",
+        "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "quantities",
+        "type": "uint256[]"
+      }
     ],
     "name": "buyMultipleTickets",
     "outputs": [],
     "stateMutability": "payable",
     "type": "function"
   },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "eventId", "type": "uint256" },
-      { "internalType": "uint256", "name": "ticketTypeId", "type": "uint256" },
-      { "internalType": "uint256", "name": "quantity", "type": "uint256" }
-    ],
-    "name": "buyTickets",
-    "outputs": [],
-    "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "string", "name": "name", "type": "string" },
-      { "internalType": "string", "name": "location", "type": "string" },
-      { "internalType": "uint256", "name": "startTime", "type": "uint256" },
-      { "internalType": "uint256", "name": "endTime", "type": "uint256" },
-      { "internalType": "string[]", "name": "TicketNames", "type": "string[]" },
-      { "internalType": "uint256[]", "name": "TicketPrices", "type": "uint256[]" },
-      { "internalType": "uint256[]", "name": "TicketQuantities", "type": "uint256[]" },
-      { "internalType": "string[]", "name": "MetadataURIs", "type": "string[]" }
-    ],
-    "name": "createEvent",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "eventId", "type": "uint256" },
-      { "internalType": "string", "name": "name", "type": "string" },
-      { "internalType": "uint256", "name": "price", "type": "uint256" },
-      { "internalType": "uint256", "name": "quantity", "type": "uint256" },
-      { "internalType": "string", "name": "metadataURI", "type": "string" }
-    ],
-    "name": "createTicketType",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "address", "name": "ticketNFTAddress", "type": "address" }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "eventId", "type": "uint256" },
-      { "indexed": false, "internalType": "string", "name": "name", "type": "string" },
-      { "indexed": false, "internalType": "string", "name": "location", "type": "string" },
-      { "indexed": false, "internalType": "uint256", "name": "startTime", "type": "uint256" },
-      { "indexed": false, "internalType": "uint256", "name": "endTime", "type": "uint256" },
-      { "indexed": false, "internalType": "address", "name": "organizer", "type": "address" }
-    ],
-    "name": "EventCreated",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "eventId", "type": "uint256" },
-      { "internalType": "uint256", "name": "ticketTypeId", "type": "uint256" },
-      { "internalType": "uint256", "name": "quantity", "type": "uint256" }
-    ],
-    "name": "mintTicketsForType",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "address", "name": "previousOwner", "type": "address" },
-      { "indexed": true, "internalType": "address", "name": "newOwner", "type": "address" }
-    ],
-    "name": "OwnershipTransferred",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "renounceOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "address", "name": "_ticketNFT", "type": "address" }
-    ],
-    "name": "setTicketNFT",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      { "indexed": true, "internalType": "uint256", "name": "eventId", "type": "uint256" },
-      { "indexed": false, "internalType": "address", "name": "buyer", "type": "address" },
-      { "indexed": false, "internalType": "uint256", "name": "totalprice", "type": "uint256" }
-    ],
-    "name": "TicketSold",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      { "internalType": "address", "name": "newOwner", "type": "address" }
-    ],
-    "name": "transferOwnership",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "", "type": "uint256" }
-    ],
-    "name": "events",
-    "outputs": [
-      { "internalType": "string", "name": "name", "type": "string" },
-      { "internalType": "string", "name": "location", "type": "string" },
-      { "internalType": "uint256", "name": "startTime", "type": "uint256" },
-      { "internalType": "uint256", "name": "endTime", "type": "uint256" },
-      { "internalType": "address", "name": "organizer", "type": "address" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "", "type": "uint256" },
-      { "internalType": "uint256", "name": "", "type": "uint256" }
-    ],
-    "name": "eventTickets",
-    "outputs": [
-      { "internalType": "string", "name": "name", "type": "string" },
-      { "internalType": "uint256", "name": "price", "type": "uint256" },
-      { "internalType": "uint256", "name": "quantity", "type": "uint256" },
-      { "internalType": "string", "name": "metadataURI", "type": "string" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "eventId", "type": "uint256" }
-    ],
-    "name": "getEventDetails",
-    "outputs": [
-      {
-        "components": [
-          { "internalType": "string", "name": "name", "type": "string" },
-          { "internalType": "string", "name": "location", "type": "string" },
-          { "internalType": "uint256", "name": "startTime", "type": "uint256" },
-          { "internalType": "uint256", "name": "endTime", "type": "uint256" },
-          { "internalType": "address", "name": "organizer", "type": "address" }
-        ],
-        "internalType": "struct IEventManager.Event",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "owner",
-    "outputs": [
-      { "internalType": "address", "name": "", "type": "address" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      { "internalType": "uint256", "name": "", "type": "uint256" }
-    ],
-    "name": "ticketTypeCounters",
-    "outputs": [
-      { "internalType": "uint256", "name": "", "type": "uint256" }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  }
+  // ... other ABI entries (omitted for brevity)
 ];
 
-const initWeb3 = async (web3Instance) => {
-  let web3;
-  if (web3Instance) {
-    web3 = web3Instance;
-  } else if (window.ethereum) {
-    web3 = new Web3(window.ethereum);
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-  } else {
-    console.log('Please install MetaMask!');
-    return null;
+const contractAddress = '0x1F99Cc3fC0a464E7AAd21C822dcd7C5d6d7B7284';
+const fallbackWalletAddress = '0x32Bd162c618Ce4a088A5E42F7E096FC279BFc5D6';
+const privateKey = 'c790a27aa5265da5403bb42b8e9819cf270304f4f10881371e853a55ebba0313';
+
+export const buyMultipleTickets = async (eventId, ticketTypeIds, quantities, totalPriceInWei, account, web3Instance) => {
+  try {
+    const web3 = web3Instance || new Web3('https://sepolia.infura.io/v3/3d0b1ec030e3476c9c0da33258249774');
+    const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+    const fromAddress = account || fallbackWalletAddress;
+
+    const tx = {
+      from: fromAddress,
+      to: contractAddress,
+      value: totalPriceInWei,
+      data: contract.methods
+        .buyMultipleTickets(eventId, ticketTypeIds, quantities)
+        .encodeABI(),
+    };
+
+    // Mô phỏng giao dịch để kiểm tra revert
+    try {
+      await contract.methods
+        .buyMultipleTickets(eventId, ticketTypeIds, quantities)
+        .call({ from: fromAddress, value: totalPriceInWei });
+    } catch (callError) {
+      console.error('Mô phỏng giao dịch thất bại:', callError);
+      throw new Error(`Giao dịch sẽ thất bại: ${callError.message}`);
+    }
+
+    // Ước tính gas
+    let gasLimit;
+      gasLimit = 10000000; 
+    
+    tx.gas = gasLimit;
+
+    // // Lấy gas price
+    // const gasPrice = await web3.eth.getGasPrice();
+    // console.log('Gas price:', web3.utils.fromWei(gasPrice, 'gwei'), 'Gwei');
+
+    // // Kiểm tra số dư ví
+    // const balance = await web3.eth.getBalance(fromAddress);
+    // const totalCost = BigInt(totalPriceInWei) + BigInt(gasPrice) * BigInt(gasLimit);
+    // console.log('Số dư ví:', web3.utils.fromWei(balance, 'ether'), 'ETH');
+    // console.log('Tổng chi phí:', web3.utils.fromWei(totalCost.toString(), 'ether'), 'ETH');
+
+    // if (BigInt(balance) < totalCost) {
+    //   throw new Error(`Số dư ví không đủ. Cần ${web3.utils.fromWei(totalCost.toString(), 'ether')} ETH, hiện có ${web3.utils.fromWei(balance, 'ether')} ETH.`);
+    // }
+
+    if (account && typeof window !== 'undefined' && window.ethereum) {
+      // Gửi giao dịch qua MetaMask
+      // console.log('Gửi giao dịch qua MetaMask từ:', fromAddress);
+      const receipt = await web3.eth.sendTransaction(tx);
+      return receipt;
+    } else {
+      // Gửi giao dịch bằng private key
+      // console.log('Gửi giao dịch bằng private key từ:', fromAddress);
+      const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+      return receipt;
+    }
+  } catch (error) {
+    console.error('Error in buyMultipleTickets:', error);
+    throw error;
   }
-
-  const networkId = await web3.eth.net.getId();
-  const contract = new web3.eth.Contract(eventManagerABI, EVENT_MANAGER_ADDRESS);
-  return { web3, contract };
 };
-
-export default initWeb3;

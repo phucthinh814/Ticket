@@ -8,11 +8,12 @@ import 'react-toastify/dist/ReactToastify.css';
 import SpecialEvents from '../components/SpecialEvents';
 import { locations } from '../data/eventsData';
 import { WalletContext } from '../context/WalletContext';
+import { buyMultipleTickets } from '../utils/web3';
 
 const PurchasePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { connectWallet, checkConnectionStatus } = useContext(WalletContext);
+  const { connectWallet, checkConnectionStatus, walletAddress, web3 } = useContext(WalletContext);
   const [event, setEvent] = useState(null);
   const [ticketTypes, setTicketTypes] = useState([]);
   const [selectedTickets, setSelectedTickets] = useState([]);
@@ -21,25 +22,23 @@ const PurchasePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [events, setEvents] = useState([]);
-  // Fetch event and ticket types
+  const [isPaymentProcessing, setIsPaymentProcessing] = useState(false);
+
   useEffect(() => {
     const fetchEventData = async () => {
       try {
-        // Fetch event details
         const eventResponse = await fetch(`http://localhost:8080/api/events/${id}`);
         if (!eventResponse.ok) {
           throw new Error('Failed to fetch event details');
         }
         const eventData = await eventResponse.json();
 
-        // Fetch ticket types
         const ticketResponse = await fetch(`http://localhost:8080/api/ticket-types/event/${id}`);
         if (!ticketResponse.ok) {
           throw new Error('Failed to fetch ticket types');
         }
         const ticketData = await ticketResponse.json();
 
-        // Map event data
         const mappedEvent = {
           id: eventData.eventId,
           name: eventData.eventName,
@@ -48,13 +47,14 @@ const PurchasePage = () => {
           endTime: eventData.dateEnd,
         };
 
-        // Map ticket types
         const mappedTicketTypes = ticketData.map((ticket) => ({
+          ticketTypeId: ticket.ticketTypeId,
           name: ticket.name,
-          price: ticket.price, // Keep price in ETH
+          price: ticket.price,
           available: ticket.remainingAmount > 0,
-          benefits: ticket.benefits || [], // Default to empty array if benefits is null
+          benefits: ticket.benefits || [],
           remainingAmount: ticket.remainingAmount,
+          metadataURI: ticket.metadataURI || '',
         }));
 
         setEvent(mappedEvent);
@@ -69,6 +69,7 @@ const PurchasePage = () => {
 
     fetchEventData();
   }, [id]);
+
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -77,7 +78,6 @@ const PurchasePage = () => {
           throw new Error('Failed to fetch events');
         }
         const data = await response.json();
-        // Map API data to match expected structure
         const mappedEvents = data.map(event => ({
           id: event.event_id,
           name: event.event_name,
@@ -99,7 +99,7 @@ const PurchasePage = () => {
 
     fetchEvents();
   }, []);
-  // Calculate total price when selected tickets change
+
   useEffect(() => {
     const total = selectedTickets.reduce(
       (sum, item) => sum + item.ticket.price * item.quantity,
@@ -108,7 +108,6 @@ const PurchasePage = () => {
     setTotalPrice(total);
   }, [selectedTickets]);
 
-  // Handle ticket selection
   const handleSelectTicket = (ticket) => {
     setSelectedTickets((prev) => {
       const existing = prev.find((item) => item.ticket.name === ticket.name);
@@ -119,7 +118,6 @@ const PurchasePage = () => {
     });
   };
 
-  // Handle quantity change
   const handleQuantityChange = (ticketName, value) => {
     const parsedValue = parseInt(value);
     const ticket = ticketTypes.find((t) => t.name === ticketName);
@@ -146,33 +144,70 @@ const PurchasePage = () => {
     });
   };
 
-  // Handle payment
   const handlePayment = async () => {
-    const isActuallyConnected = await checkConnectionStatus();
-    if (!isActuallyConnected) {
-      toast.warning('Vui lòng kết nối ví MetaMask để thanh toán!', {
-        position: 'top-center',
-        autoClose: 2000,
-      });
-      const connected = await connectWallet();
-      if (!connected) {
-        return;
+    try {
+      setIsPaymentProcessing(true); // Bật màn hình chờ
+      const isConnected = await checkConnectionStatus();
+      if (!isConnected || !web3 || !walletAddress) {
+        toast.warning('Vui lòng kết nối ví MetaMask để thanh toán!', {
+          position: 'top-center',
+          autoClose: 2000,
+        });
+        const connected = await connectWallet();
+        if (!connected) {
+          setIsPaymentProcessing(false); // Tắt màn hình chờ nếu không kết nối
+          return;
+        }
       }
+
+      const ticketTypeIds = selectedTickets.map((item) => item.ticket.ticketTypeId);
+      const quantities = selectedTickets.map((item) => item.quantity);
+      const totalPriceInWei = web3.utils.toWei(totalPrice.toString(), 'ether');
+
+      // In dữ liệu đầu vào để debug
+      console.log('Dữ liệu giao dịch:', {
+        eventId: event.id,
+        ticketTypeIds,
+        quantities,
+        totalPriceInWei: web3.utils.fromWei(totalPriceInWei, 'ether'),
+        walletAddress,
+      });
+
+      const tx = await buyMultipleTickets(
+        event.id,
+        ticketTypeIds,
+        quantities,
+        totalPriceInWei,
+        walletAddress,
+        web3
+      );
+
+      toast.success(`Thanh toán thành công! Tx: ${tx.transactionHash}`, {
+        position: 'top-right',
+        autoClose: 5000,
+      });
+      navigate(`/`);
+    } catch (err) {
+      console.error('Lỗi thanh toán:', err);
+      let errorMessage = 'Thanh toán thất bại. Vui lòng kiểm tra dữ liệu và thử lại.';
+      if (err.message.includes('execution reverted')) {
+        errorMessage = 'Giao dịch bị từ chối do lỗi trong smart contract. Kiểm tra số lượng vé hoặc liên hệ hỗ trợ.';
+      } else if (err.message.includes('Số dư ví không đủ')) {
+        errorMessage = err.message;
+      }
+      toast.error(errorMessage, {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    } finally {
+      setIsPaymentProcessing(false); // Tắt màn hình chờ sau khi hoàn tất hoặc lỗi
     }
-    // Placeholder for payment logic
-    toast.success('Thanh toán thành công! (Placeholder)', {
-      position: 'top-center',
-      autoClose: 2000,
-    });
-    navigate(`/event/${id}`);
   };
 
-  // Toggle ticket details
   const toggleTicket = (index) => {
     setOpenTicketIndex(openTicketIndex === index ? null : index);
   };
 
-  // Format time range from ISO date strings
   const formatTimeRange = () => {
     if (!event || !event.startTime || !event.endTime) return '';
     const startDate = new Date(event.startTime);
@@ -200,9 +235,19 @@ const PurchasePage = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-black text-white min-h-screen">
+    <div className="bg-white dark:bg-black text-white min-h-screen relative">
+      {/* Màn hình chờ khi thanh toán */}
+      {isPaymentProcessing && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-900 dark:bg-gray-800 rounded-xl p-6 flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-green-500"></div>
+            <p className="text-lg text-white font-semibold">Đang chờ xác nhận thanh toán...</p>
+            <p className="text-sm text-gray-300">Vui lòng xác nhận giao dịch trên MetaMask.</p>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tiêu đề sự kiện với hình ảnh */}
         <div className="bg-gray-900 dark:bg-gray-800 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row gap-4 items-start">
           <div className="w-full sm:w-1/3">
             <img
@@ -223,9 +268,7 @@ const PurchasePage = () => {
           </div>
         </div>
 
-        {/* Layout ngang cho Chọn loại vé và Tóm tắt đơn hàng */}
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Thông tin vé (bên trái) */}
           <div className="lg:w-2/3 bg-gray-900 dark:bg-gray-800 rounded-xl p-6 shadow">
             <h2 className="text-lg font-semibold mb-4">Chọn loại vé</h2>
             {ticketTypes.map((ticket, index) => {
@@ -269,10 +312,22 @@ const PurchasePage = () => {
                       ) : (
                         <p>Loại vé không có lợi ích</p>
                       )}
+                      {/* {ticket.metadataURI && (
+                        <p className="mt-2">
+                          <span className="font-medium">Metadata URI:</span>{' '}
+                          <a
+                            href={ticket.metadataURI}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:underline"
+                          >
+                            {ticket.metadataURI}
+                          </a>
+                        </p>
+                      )} */}
                     </div>
                   )}
 
-                  {/* Nút chọn và chọn số lượng */}
                   <div className="mt-4 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                     <button
                       onClick={() => handleSelectTicket(ticket)}
@@ -307,7 +362,6 @@ const PurchasePage = () => {
             })}
           </div>
 
-          {/* Tóm tắt đơn hàng (bên phải, luôn hiển thị) */}
           <div className="lg:w-1/3 bg-gray-900 dark:bg-gray-800 rounded-xl p-6 shadow sticky top-4">
             <h2 className="text-lg font-semibold mb-4">Tóm tắt đơn hàng</h2>
             {selectedTickets.length > 0 ? (
@@ -338,15 +392,15 @@ const PurchasePage = () => {
             <button
               onClick={handlePayment}
               className="mt-4 w-full bg-green-500 text-white px-6 py-2 rounded-lg font-semibold disabled:bg-gray-600 dark:disabled:bg-gray-500 disabled:cursor-not-allowed hover:bg-green-600"
-              disabled={totalPrice === 0}
+              disabled={totalPrice === 0 || isPaymentProcessing}
             >
-              Tiến hành thanh toán
+              {isPaymentProcessing ? 'Đang xử lý...' : 'Tiến hành thanh toán'}
             </button>
           </div>
         </div>
-      {/* Special Events */}
-      <SpecialEvents events={events} />
-        {/* Điểm đến thú vị */}
+
+        <SpecialEvents events={events} />
+
         <section className="max-w-7xl text-black dark:text-white mx-auto px-4 py-8">
           <h2 className="text-xl font-semibold mb-4">Điểm đến thú vị</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -373,9 +427,9 @@ const PurchasePage = () => {
             ))}
           </div>
         </section>
-
       </div>
     </div>
   );
 };
+
 export default PurchasePage;
