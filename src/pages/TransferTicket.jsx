@@ -1,58 +1,49 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { WalletContext } from '../context/WalletContext'; // Đảm bảo đường dẫn đúng
-import { purchasedTickets } from '../data/eventsData'; // Đảm bảo đường dẫn đúng
+import React, { useContext, useState } from 'react';
+import { WalletContext } from '../context/WalletContext';
 import { ThemeContext } from '../context/ThemeContext';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { transferTicket } from '../utils/Transfer';
 
 const TransferTicket = () => {
-  //   const { isDarkMode } = useContext(ThemeContext);
-  const { walletAddress } = useContext(WalletContext); // Lấy địa chỉ wallet hiện tại
-  const [recipientAddress, setRecipientAddress] = useState(''); // Địa chỉ nhận
-  const [selectedTicket, setSelectedTicket] = useState(''); // Vé được chọn
-  const [isDialogOpen, setIsDialogOpen] = useState(false); // Trạng thái dialog
-
-  // Lọc vé "Chưa sử dụng" thuộc sở hữu của người dùng
-  const availableTickets = walletAddress
-    ? purchasedTickets.filter(
-        (ticket) => ticket.walletAddress === walletAddress && ticket.status === 'Chưa sử dụng'
-      )
-    : [];
-
-  // Đặt vé đầu tiên làm mặc định khi danh sách thay đổi
-  useEffect(() => {
-    if (availableTickets.length > 0 && !selectedTicket) {
-      setSelectedTicket(availableTickets[0].id);
-    }
-  }, [availableTickets, selectedTicket]);
+  const { walletAddress } = useContext(WalletContext);
+  // const { isDarkMode } = useContext(ThemeContext);
+  const [recipientAddress, setRecipientAddress] = useState('');
+  const [tokenId, setTokenId] = useState('');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!recipientAddress || !selectedTicket) {
-      toast.error('Vui lòng nhập địa chỉ nhận và chọn vé.', {
+    if (!recipientAddress || !tokenId) {
+      toast.error('Vui lòng nhập địa chỉ nhận và ID vé.', {
         position: 'top-center',
         autoClose: 2000,
       });
       return;
     }
-    // Mở dialog xác nhận
     setIsDialogOpen(true);
   };
 
-  const handleConfirmTransfer = () => {
-    // Logic chuyển nhượng vé (placeholder)
-    console.log('Chuyển nhượng vé:', {
-      sender: walletAddress,
-      recipient: recipientAddress,
-      ticketId: selectedTicket,
-    });
-    toast.success('Chuyển nhượng thành công!', {
-      position: 'top-center',
-      autoClose: 2000,
-    });
-    setRecipientAddress(''); // Reset form
-    setSelectedTicket('');
-    setIsDialogOpen(false); // Đóng dialog
+  const handleConfirmTransfer = async () => {
+    setIsDialogOpen(false);
+    setIsLoading(true);
+    try {
+      await transferTicket(walletAddress, recipientAddress, tokenId);
+      toast.success('Chuyển nhượng thành công!', {
+        position: 'top-center',
+        autoClose: 2000,
+      });
+      setRecipientAddress('');
+      setTokenId('');
+    } catch (error) {
+      toast.error('Chuyển nhượng thất bại: ' + error.message, {
+        position: 'top-center',
+        autoClose: 2000,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancelTransfer = () => {
@@ -60,7 +51,7 @@ const TransferTicket = () => {
       position: 'top-center',
       autoClose: 2000,
     });
-    setIsDialogOpen(false); // Đóng dialog
+    setIsDialogOpen(false);
   };
 
   return (
@@ -88,21 +79,14 @@ const TransferTicket = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Vé</label>
-            <select
-              value={selectedTicket}
-              onChange={(e) => setSelectedTicket(e.target.value)}
-              className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-black dark:text-white"
-            >
-              <option value="" disabled>
-                Chọn vé
-              </option>
-              {availableTickets.map((ticket) => (
-                <option key={ticket.id} value={ticket.id}>
-                  {ticket.eventName} - {ticket.ticketName} 
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">ID Vé</label>
+            <input
+              type="text"
+              value={tokenId}
+              onChange={(e) => setTokenId(e.target.value)}
+              placeholder="Nhập ID vé"
+              className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm p-2 bg-white dark:bg-gray-700 text-black dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+            />
           </div>
           <button
             type="submit"
@@ -118,10 +102,7 @@ const TransferTicket = () => {
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-sm w-full">
               <h3 className="text-lg font-semibold text-black dark:text-white mb-4">Xác nhận chuyển nhượng</h3>
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
-                Bạn có muốn chuyển nhượng vé "
-                {availableTickets.find((t) => t.id === parseInt(selectedTicket))?.eventName} -{' '}
-                {availableTickets.find((t) => t.id === parseInt(selectedTicket))?.ticketName}" cho địa chỉ "
-                {recipientAddress}" không?
+                Bạn có muốn chuyển nhượng vé với ID "{tokenId}" cho địa chỉ "{recipientAddress}" không?
               </p>
               <div className="flex justify-end gap-4">
                 <button
@@ -137,6 +118,17 @@ const TransferTicket = () => {
                   Xác nhận
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Màn hình chờ giao dịch */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-900 dark:bg-gray-800 rounded-xl p-6 flex flex-col items-center gap-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-green-500"></div>
+              <p className="text-lg text-white font-semibold">Đang chờ xác nhận thanh toán...</p>
+              <p className="text-sm text-gray-300">Vui lòng xác nhận giao dịch trên MetaMask.</p>
             </div>
           </div>
         )}
