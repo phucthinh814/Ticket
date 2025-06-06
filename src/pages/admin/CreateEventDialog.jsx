@@ -229,23 +229,23 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     }));
   };
 
-  // Handle updating ticket image
-  const handleUpdateTicketImage = (index, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setError('Kích thước ảnh vé không được vượt quá 10MB');
-        return;
-      }
-      if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-        setError('Chỉ hỗ trợ định dạng PNG, JPEG, hoặc JPG');
-        return;
-      }
-      const updatedTickets = [...eventData.ticketTypes];
-      updatedTickets[index] = { ...updatedTickets[index], image: file };
-      setEventData({ ...eventData, ticketTypes: updatedTickets });
-    }
-  };
+  // // Handle updating ticket image
+  // const handleUpdateTicketImage = (index, e) => {
+  //   const file = e.target.files[0];
+  //   if (file) {
+  //     if (file.size > 10 * 1024 * 1024) {
+  //       setError('Kích thước ảnh vé không được vượt quá 10MB');
+  //       return;
+  //     }
+  //     if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
+  //       setError('Chỉ hỗ trợ định dạng PNG, JPEG, hoặc JPG');
+  //       return;
+  //     }
+  //     const updatedTickets = [...eventData.ticketTypes];
+  //     updatedTickets[index] = { ...updatedTickets[index], image: file };
+  //     setEventData({ ...eventData, ticketTypes: updatedTickets });
+  //   }
+  // };
 
   // Handle updating benefit
   const handleUpdateBenefit = (index, benefitIndex, value) => {
@@ -254,20 +254,54 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     setEventData({ ...eventData, ticketTypes: updatedTickets });
   };
 
-  // Handle adding benefit
-  const handleAddBenefit = (index) => {
-    const updatedTickets = [...eventData.ticketTypes];
-    updatedTickets[index].benefits = [...updatedTickets[index].benefits, ''];
-    setEventData({ ...eventData, ticketTypes: updatedTickets });
-  };
+  // // Handle adding benefit
+  // const handleAddBenefit = (index) => {
+  //   const updatedTickets = [...eventData.ticketTypes];
+  //   updatedTickets[index].benefits = [...updatedTickets[index].benefits, ''];
+  //   setEventData({ ...eventData, ticketTypes: updatedTickets });
+  // };
 
-  // Handle removing benefit
-  const handleRemoveBenefit = (index, benefitIndex) => {
-    const updatedTickets = [...eventData.ticketTypes];
-    updatedTickets[index].benefits = updatedTickets[index].benefits.filter((_, i) => i !== benefitIndex);
-    setEventData({ ...eventData, ticketTypes: updatedTickets });
-  };
-
+  // // Handle removing benefit
+  // const handleRemoveBenefit = (index, benefitIndex) => {
+  //   const updatedTickets = [...eventData.ticketTypes];
+  //   updatedTickets[index].benefits = updatedTickets[index].benefits.filter((_, i) => i !== benefitIndex);
+  //   setEventData({ ...eventData, ticketTypes: updatedTickets });
+  // };
+const handleCancel = () => {
+  // Reset all state to initial values
+  setEventData({
+    organizer: { name: '', logo: null, description: '' },
+    event: {
+      name: '',
+      location: '',
+      description: '',
+      image_url: null,
+      dateStart: null,
+      dateEnd: null,
+    },
+    ticketTypes: [],
+  });
+  setTicketData({
+    name: '',
+    price: '',
+    amount: '',
+    metadataURI: '',
+    image: null,
+    benefits: [''],
+  });
+  setLogoPreview('');
+  setEventImagePreview('');
+  setTicketImagePreview('');
+  setError('');
+  
+  // Clear SimpleMDE editor content if it exists
+  if (simpleMdeRef.current) {
+    simpleMdeRef.current.value('');
+  }
+  
+  // Close the dialog
+  onClose();
+};
   // Handle saving event to API
   const handleSaveEvent = async () => {
     if (
@@ -633,7 +667,7 @@ const validateDates = (currentDate, isStartDate) => {
             {eventData.ticketTypes.length > 0 ? (
               eventData.ticketTypes.map((ticket, index) => (
                 <div key={index} className="mt-4 p-4 border rounded bg-gray-100 dark:bg-gray-700">
-                  <h5 className="text-md font-semibold text-black dark:text-white">Vé {index + 1}</h5>
+                  <h5 className="text-md font-semibold text-black dark:text-white">Loại vé {index + 1}</h5>
                   <div className="space-y-2">
                     <input
                       type="text"
@@ -683,13 +717,13 @@ const validateDates = (currentDate, isStartDate) => {
                     />
                     <div className="flex flex-col space-y-1">
                       <label className="text-black dark:text-white text-sm sm:text-base">Hình ảnh vé</label>
-                      <input
+                      {/* <input
                         type="file"
                         accept="image/*"
                         onChange={(e) => handleUpdateTicketImage(index, e)}
                         className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                         disabled={isLoading}
-                      />
+                      /> */}
                       {ticket.image && (
                         <img
                           src={URL.createObjectURL(ticket.image)}
@@ -712,29 +746,29 @@ const validateDates = (currentDate, isStartDate) => {
                             className="w-full sm:w-auto flex-1 p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                             disabled={isLoading}
                           />
-                          <button
+                          {/* <button
                             onClick={() => handleRemoveBenefit(index, benefitIndex)}
                             className="w-full sm:w-auto px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm sm:text-base disabled:opacity-50"
                             disabled={isLoading}
                           >
                             Xóa
-                          </button>
+                          </button> */}
                         </div>
                       ))}
-                      <button
+                      {/* <button
                         onClick={() => handleAddBenefit(index)}
                         className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm sm:text-base disabled:opacity-50"
                         disabled={isLoading}
                       >
                         Thêm lợi ích
-                      </button>
+                      </button> */}
                     </div>
                     <button
                       onClick={() => handleRemoveTicket(index)}
                       className="w-full sm:w-auto px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 mt-2 text-sm sm:text-base disabled:opacity-50"
                       disabled={isLoading}
                     >
-                      Xóa vé
+                      Xóa loại vé
                     </button>
                   </div>
                 </div>
@@ -747,7 +781,7 @@ const validateDates = (currentDate, isStartDate) => {
 
         <div className="mt-6 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
           <button
-            onClick={onClose}
+            onClick={handleCancel}
             className="w-full sm:w-auto px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 text-sm sm:text-base disabled:opacity-50"
             disabled={isLoading}
           >
@@ -758,7 +792,7 @@ const validateDates = (currentDate, isStartDate) => {
             className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm sm:text-base disabled:opacity-50"
             disabled={isLoading}
           >
-            {isLoading ? 'Đang lưu...' : 'Lưu'}
+            {isLoading ? 'Đang Tạo...' : 'Tạo'}
           </button>
         </div>
       </div>
@@ -850,7 +884,19 @@ const validateDates = (currentDate, isStartDate) => {
               </div>
               <div className="mt-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
                 <button
-                  onClick={() => setIsTicketDialogOpen(false)}
+                 onClick={() => {
+                  setTicketData({
+                    name: '',
+                    price: '',
+                    amount: '',
+                    metadataURI: '',
+                    image: null,
+                    benefits: [''],
+                  });
+                  setTicketImagePreview('');
+                  setError('');
+                  setIsTicketDialogOpen(false);
+                }}
                   className="w-full sm:w-auto px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 text-sm sm:text-base disabled:opacity-50"
                   disabled={isLoading}
                 >
@@ -861,7 +907,7 @@ const validateDates = (currentDate, isStartDate) => {
                   className="w-full sm:w-auto px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm sm:text-base disabled:opacity-50"
                   disabled={isLoading}
                 >
-                  Thêm vé
+                  Tạo Loại Vé
                 </button>
               </div>
             </div>

@@ -12,15 +12,16 @@ const Home = () => {
 
   // Fetch events from API
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await fetch('http://localhost:8080/api/events');
-        if (!response.ok) {
-          throw new Error('Failed to fetch events');
-        }
-        const data = await response.json();
-        // Map API data to match expected structure
-        const mappedEvents = data.map(event => ({
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/events');
+      if (!response.ok) {
+        throw new Error('Failed to fetch events');
+      }
+      const data = await response.json();
+      // Map API data to match expected structure
+      const mappedEvents = data
+        .map(event => ({
           id: event.event_id,
           name: event.event_name,
           description: event.description,
@@ -29,18 +30,19 @@ const Home = () => {
           date_start: event.date_start,
           date_end: event.date_end,
           status: event.status,
-        }));
-        setEvents(mappedEvents);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching events:', err);
-        setError('Không thể tải dữ liệu sự kiện. Vui lòng thử lại sau.');
-        setLoading(false);
-      }
-    };
+        }))
+        .reverse(); // Đảo ngược mảng sau khi map
+      setEvents(mappedEvents);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+      setError('Không thể tải dữ liệu sự kiện. Vui lòng thử lại sau.');
+      setLoading(false);
+    }
+  };
 
-    fetchEvents();
-  }, []);
+  fetchEvents();
+}, []);
 
   const eventsPerPage = 2;
   const totalPages = Math.ceil(events.length / eventsPerPage);

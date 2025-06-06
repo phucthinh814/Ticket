@@ -10,6 +10,8 @@ import { locations } from '../data/eventsData';
 import { WalletContext } from '../context/WalletContext';
 import { buyMultipleTickets } from '../utils/web3';
 
+const contractAddress = '0x1F99Cc3fC0a464E7AAd21C822dcd7C5d6d7B7284';
+
 const PurchasePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -29,13 +31,13 @@ const PurchasePage = () => {
       try {
         const eventResponse = await fetch(`http://localhost:8080/api/events/${id}`);
         if (!eventResponse.ok) {
-          throw new Error('Failed to fetch event details');
+          throw new Error('Không thể tải chi tiết sự kiện');
         }
         const eventData = await eventResponse.json();
 
         const ticketResponse = await fetch(`http://localhost:8080/api/ticket-types/event/${id}`);
         if (!ticketResponse.ok) {
-          throw new Error('Failed to fetch ticket types');
+          throw new Error('Không thể tải loại vé');
         }
         const ticketData = await ticketResponse.json();
 
@@ -62,7 +64,7 @@ const PurchasePage = () => {
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Không thể tải dữ liệu sự kiện. Vui lòng thử lại sau.');
+        setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
         setLoading(false);
       }
     };
@@ -75,7 +77,7 @@ const PurchasePage = () => {
       try {
         const response = await fetch('http://localhost:8080/api/events');
         if (!response.ok) {
-          throw new Error('Failed to fetch events');
+          throw new Error('Không thể tải danh sách sự kiện');
         }
         const data = await response.json();
         const mappedEvents = data.map(event => ({
@@ -146,7 +148,7 @@ const PurchasePage = () => {
 
   const handlePayment = async () => {
     try {
-      setIsPaymentProcessing(true); // Bật màn hình chờ
+      setIsPaymentProcessing(true);
       const isConnected = await checkConnectionStatus();
       if (!isConnected || !web3 || !walletAddress) {
         toast.warning('Vui lòng kết nối ví MetaMask để thanh toán!', {
@@ -155,7 +157,7 @@ const PurchasePage = () => {
         });
         const connected = await connectWallet();
         if (!connected) {
-          setIsPaymentProcessing(false); // Tắt màn hình chờ nếu không kết nối
+          setIsPaymentProcessing(false);
           return;
         }
       }
@@ -164,7 +166,6 @@ const PurchasePage = () => {
       const quantities = selectedTickets.map((item) => item.quantity);
       const totalPriceInWei = web3.utils.toWei(totalPrice.toString(), 'ether');
 
-      // In dữ liệu đầu vào để debug
       console.log('Dữ liệu giao dịch:', {
         eventId: event.id,
         ticketTypeIds,
@@ -182,17 +183,71 @@ const PurchasePage = () => {
         web3
       );
 
+      // Kiểm tra tokenIds
+      if (!tx.tokenIds || tx.tokenIds.length !== selectedTickets.reduce((sum, item) => sum + item.quantity, 0)) {
+        throw new Error('Không lấy được đủ tokenId từ giao dịch. Vui lòng kiểm tra hợp đồng.');
+      }
+
+      // Prepare order data for API
+      let tokenIndex = 0;
+      const orderData = {
+        walletId: walletAddress,
+        eventId: event.id,
+        totalPrice: totalPrice,
+        isResale: false,
+        transaction: {
+          txHash: tx.transactionHash,
+          fromAddress: contractAddress, 
+          toAddress: walletAddress, 
+          transactionDate: new Date().toISOString(),
+        },
+        tickets: selectedTickets.flatMap((item) =>
+          Array(item.quantity).fill().map(() => {
+            const tokenId = tx.tokenIds[tokenIndex++];
+            return {
+              ticketTypeId: item.ticket.ticketTypeId,
+              tokenId,
+              price: item.ticket.price,
+            };
+          })
+        ),
+      };
+
+      // Log orderData để debug
+      console.log('Dữ liệu gửi đến API:', JSON.stringify(orderData, null, 2));
+
+      // Gửi dữ liệu đến API
+      const orderResponse = await fetch('http://localhost:8080/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json().catch(() => ({}));
+        console.error('Phản hồi lỗi từ API:', errorData);
+        throw new Error(`Không thể gửi đơn hàng đến API: ${errorData.message || orderResponse.statusText}`);
+      }
+
       toast.success(`Thanh toán thành công! Tx: ${tx.transactionHash}`, {
         position: 'top-right',
         autoClose: 5000,
       });
-      navigate(`/`);
+      navigate('/');
     } catch (err) {
       console.error('Lỗi thanh toán:', err);
       let errorMessage = 'Thanh toán thất bại. Vui lòng kiểm tra dữ liệu và thử lại.';
       if (err.message.includes('execution reverted')) {
-        errorMessage = 'Giao dịch bị từ chối do lỗi trong smart contract. Kiểm tra số lượng vé hoặc liên hệ hỗ trợ.';
+        errorMessage = 'Giao dịch bị từ chối do lỗi trong hợp đồng thông minh. Vui lòng kiểm tra số lượng vé hoặc liên hệ hỗ trợ.';
       } else if (err.message.includes('Số dư ví không đủ')) {
+        errorMessage = err.message;
+      } else if (err.message.includes('Không thể gửi đơn hàng đến API')) {
+        errorMessage = err.message;
+      } else if (err.message.includes('Duplicate entry')) {
+        errorMessage = 'Lỗi trùng lặp tokenId. Vui lòng kiểm tra hợp đồng thông minh hoặc liên hệ hỗ trợ.';
+      } else if (err.message.includes('Không lấy được đủ tokenId')) {
         errorMessage = err.message;
       }
       toast.error(errorMessage, {
@@ -200,7 +255,7 @@ const PurchasePage = () => {
         autoClose: 3000,
       });
     } finally {
-      setIsPaymentProcessing(false); // Tắt màn hình chờ sau khi hoàn tất hoặc lỗi
+      setIsPaymentProcessing(false);
     }
   };
 
@@ -236,7 +291,6 @@ const PurchasePage = () => {
 
   return (
     <div className="bg-white dark:bg-black text-white min-h-screen relative">
-      {/* Màn hình chờ khi thanh toán */}
       {isPaymentProcessing && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-gray-900 dark:bg-gray-800 rounded-xl p-6 flex flex-col items-center gap-4">
@@ -255,7 +309,7 @@ const PurchasePage = () => {
               alt={event.name}
               className="w-full h-40 sm:h-48 object-cover rounded-lg"
               onError={(e) => {
-                console.error('Image failed to load:', event.image);
+                console.error('Hình ảnh không tải được:', event.image);
                 e.target.src = 'https://via.placeholder.com/300x200?text=Fallback+Image';
               }}
             />
@@ -312,19 +366,6 @@ const PurchasePage = () => {
                       ) : (
                         <p>Loại vé không có lợi ích</p>
                       )}
-                      {/* {ticket.metadataURI && (
-                        <p className="mt-2">
-                          <span className="font-medium">Metadata URI:</span>{' '}
-                          <a
-                            href={ticket.metadataURI}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:underline"
-                          >
-                            {ticket.metadataURI}
-                          </a>
-                        </p>
-                      )} */}
                     </div>
                   )}
 
@@ -415,7 +456,7 @@ const PurchasePage = () => {
                     alt={location.title}
                     className="w-full h-full object-cover rounded-2xl"
                     onError={(e) => {
-                      console.error('Location image failed to load:', location.image);
+                      console.error('Hình ảnh địa điểm không tải được:', location.image);
                       e.target.src = 'https://via.placeholder.com/300x350?text=Fallback+Image';
                     }}
                   />

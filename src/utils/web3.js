@@ -24,7 +24,32 @@ const contractABI = [
     "stateMutability": "payable",
     "type": "function"
   },
-  // ... other ABI entries (omitted for brevity)
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "eventId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "buyer",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "totalprice",
+        "type": "uint256"
+      }
+    ],
+    "name": "TicketSold",
+    "type": "event"
+  }
+  // ... other ABI entries omitted for brevity
 ];
 
 const contractAddress = '0x1F99Cc3fC0a464E7AAd21C822dcd7C5d6d7B7284';
@@ -59,36 +84,53 @@ export const buyMultipleTickets = async (eventId, ticketTypeIds, quantities, tot
 
     // Ước tính gas
     let gasLimit;
-      gasLimit = 10000000; 
-    
+    gasLimit = 10000000; // Fallback
     tx.gas = gasLimit;
 
-    // // Lấy gas price
-    // const gasPrice = await web3.eth.getGasPrice();
+    // Lấy gas price
+    const gasPrice = await web3.eth.getGasPrice();
     // console.log('Gas price:', web3.utils.fromWei(gasPrice, 'gwei'), 'Gwei');
 
-    // // Kiểm tra số dư ví
-    // const balance = await web3.eth.getBalance(fromAddress);
-    // const totalCost = BigInt(totalPriceInWei) + BigInt(gasPrice) * BigInt(gasLimit);
+    // Kiểm tra số dư ví
+    const balance = await web3.eth.getBalance(fromAddress);
+    const totalCost = BigInt(totalPriceInWei) + BigInt(gasPrice) * BigInt(gasLimit);
     // console.log('Số dư ví:', web3.utils.fromWei(balance, 'ether'), 'ETH');
     // console.log('Tổng chi phí:', web3.utils.fromWei(totalCost.toString(), 'ether'), 'ETH');
 
-    // if (BigInt(balance) < totalCost) {
-    //   throw new Error(`Số dư ví không đủ. Cần ${web3.utils.fromWei(totalCost.toString(), 'ether')} ETH, hiện có ${web3.utils.fromWei(balance, 'ether')} ETH.`);
-    // }
-
-    if (account && typeof window !== 'undefined' && window.ethereum) {
-      // Gửi giao dịch qua MetaMask
-      // console.log('Gửi giao dịch qua MetaMask từ:', fromAddress);
-      const receipt = await web3.eth.sendTransaction(tx);
-      return receipt;
-    } else {
-      // Gửi giao dịch bằng private key
-      // console.log('Gửi giao dịch bằng private key từ:', fromAddress);
-      const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
-      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-      return receipt;
+    if (BigInt(balance) < totalCost) {
+      throw new Error(`Số dư ví không đủ. Cần ${web3.utils.fromWei(totalCost.toString(), 'ether')} ETH, hiện có ${web3.utils.fromWei(balance, 'ether')} ETH.`);
     }
+
+    let receipt;
+    if (account && typeof window !== 'undefined' && window.ethereum) {
+      // console.log('Gửi giao dịch qua MetaMask từ:', fromAddress);
+      receipt = await web3.eth.sendTransaction(tx);
+    } else {
+      console.log('Gửi giao dịch bằng private key từ:', fromAddress);
+      const signedTx = await web3.eth.accounts.signTransaction(tx, privateKey);
+      receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+    }
+
+    // Phân tích log để lấy tokenIds từ sự kiện Transfer (ERC721)
+    const transferEventSignature = web3.utils.sha3('Transfer(address,address,uint256)');
+    const tokenIds = receipt.logs
+      .filter(log => log.topics[0] === transferEventSignature && log.topics[1] === web3.utils.padLeft(0, 64)) // from = address(0)
+      .map(log => {
+        const decodedLog = web3.eth.abi.decodeLog(
+          [
+            { type: 'address', name: 'from', indexed: true },
+            { type: 'address', name: 'to', indexed: true },
+            { type: 'uint256', name: 'tokenId', indexed: true }
+          ],
+          log.data,
+          log.topics.slice(1)
+        );
+        return Number(decodedLog.tokenId);
+      });
+
+    // console.log('Token IDs mint:', tokenIds);
+
+    return { ...receipt, tokenIds };
   } catch (error) {
     console.error('Error in buyMultipleTickets:', error);
     throw error;
