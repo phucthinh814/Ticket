@@ -17,7 +17,7 @@ const TransferTicket = () => {
     e.preventDefault();
     if (!recipientAddress || !tokenId) {
       toast.error('Vui lòng nhập địa chỉ nhận và ID vé.', {
-        position: 'top-center',
+        position: 'top-right',
         autoClose: 2000,
       });
       return;
@@ -31,14 +31,14 @@ const TransferTicket = () => {
     try {
       await transferTicket(walletAddress, recipientAddress, tokenId);
       toast.success('Chuyển nhượng thành công!', {
-        position: 'top-center',
+        position: 'top-right',
         autoClose: 2000,
       });
       setRecipientAddress('');
       setTokenId('');
     } catch (error) {
       toast.error('Chuyển nhượng thất bại: ' + error.message, {
-        position: 'top-center',
+        position: 'top-right',
         autoClose: 2000,
       });
     } finally {
@@ -48,7 +48,7 @@ const TransferTicket = () => {
 
   const handleCancelTransfer = () => {
     toast.info('Chuyển nhượng đã bị hủy.', {
-      position: 'top-center',
+      position: 'top-right',
       autoClose: 2000,
     });
     setIsDialogOpen(false);
