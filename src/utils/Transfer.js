@@ -26,7 +26,7 @@ const CONTRACT_ABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   }
-  // Include other ABI methods as needed
+
 ];
 
 export const transferTicket = async (fromAddress, toAddress, tokenId) => {
@@ -35,20 +35,35 @@ export const transferTicket = async (fromAddress, toAddress, tokenId) => {
   }
 
   try {
-    // Initialize Web3
     const web3 = new Web3(window.ethereum);
-    
-    // Request account access
+
+
     await window.ethereum.request({ method: 'eth_requestAccounts' });
-    
-    // Initialize contract
+
+  
     const contract = new web3.eth.Contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-    
-    // Execute transfer
+
+
     const tx = await contract.methods
       .transferFrom(fromAddress, toAddress, tokenId)
       .send({ from: fromAddress });
-    
+
+ 
+    try {
+      await window.ethereum.request({
+        method: 'wallet_watchAsset',
+        params: {
+          type: 'ERC721',
+          options: {
+            address: CONTRACT_ADDRESS,
+            tokenId: tokenId,
+          },
+        },
+      });
+    } catch (watchError) {
+      console.warn('Could not suggest NFT to wallet:', watchError);
+    }
+
     return tx;
   } catch (error) {
     console.error('Transfer error:', error);

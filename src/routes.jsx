@@ -8,6 +8,7 @@ import PurchasePage from './pages/PurchasePage';
 import CustomerInfo from './pages/CustomerInfo';
 import HistoryTicket from './pages/HistoryTicket';
 import TransferTicket from './pages/TransferTicket';
+import MarketplaceTicketManagement from './pages/MarketplaceTicketManagement';
 import AdminLayout from './pages/admin/AdminLayout'; // Đảm bảo đường dẫn đúng
 import AdminPage from './pages/admin/AdminPage';
 import EventManagement from './pages/admin/EventManagement';
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
       { path: '/customer-info', element: <CustomerInfo /> },
       { path: '/history-ticket', element: <HistoryTicket /> },
       { path: '/transfer-ticket', element: <TransferTicket /> },
+      { path: '/Market-Manager', element: <MarketplaceTicketManagement /> },
     ],
   },
   {

@@ -8,6 +8,7 @@ import logoDarkMode from '../assets/logo_darkmode.png';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import PersonIcon from '@mui/icons-material/Person';
 import HistoryIcon from '@mui/icons-material/History';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import VisibilityIcon from '@mui/icons-material/Visibility';
@@ -169,6 +170,12 @@ const Header = () => {
                       <div className="px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm flex items-center gap-2">
                         <PersonIcon fontSize="small" className="text-gray-600 dark:text-gray-300" />
                         Thông tin khách hàng
+                      </div>
+                    </Link>
+                     <Link to="/Market-Manager" onClick={() => setShowDropdown(false)}>
+                      <div className="px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm flex items-center gap-2">
+                        <StorefrontIcon  fontSize="small" className="text-gray-600 dark:text-gray-300" />
+                        Quản Lý Marketplace
                       </div>
                     </Link>
                     <Link to="/history-ticket" onClick={() => setShowDropdown(false)}>

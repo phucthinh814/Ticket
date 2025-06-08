@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 
-
 const Marketplace = () => {
   // Danh sách các sự kiện
   const events = [
@@ -12,7 +11,7 @@ const Marketplace = () => {
       description: "Đêm tiệc EDM tại District 1 Nightclub, TP.HCM.",
       time: "22:00 - 02:00, ngày 05/07/2025",
       location: "District 1 Nightclub, TP.HCM",
-      price: "600.000", // Giá sự kiện
+      price: 0.024, // Equivalent to 600,000 VND at 0.00000004 ETH/VND
       image: "https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg",
       link: `/event/5`, // Link đi đến chi tiết sự kiện
     },
@@ -22,7 +21,7 @@ const Marketplace = () => {
       description: "Hòa mình vào âm nhạc lounge thư giãn tại Sunset Lounge.",
       time: "20:00 - 00:00, ngày 10/07/2025",
       location: "Sunset Lounge, TP.HCM",
-      price: "400.000", // Giá sự kiện
+      price: 0.016, // Equivalent to 400,000 VND
       image: "https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg",
       link: `/event/6`, // Link đi đến chi tiết sự kiện
     },
@@ -32,7 +31,7 @@ const Marketplace = () => {
       description: "Nhạc Jazz đêm khuya tại Jazz Club.",
       time: "19:00 - 23:00, ngày 12/07/2025",
       location: "Jazz Club, TP.HCM",
-      price: "500.000", // Giá sự kiện
+      price: 0.020, // Equivalent to 500,000 VND
       image: "https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg",
       link: `/event/7`, // Link đi đến chi tiết sự kiện
     },
@@ -42,7 +41,7 @@ const Marketplace = () => {
       description: "Rock Festival lớn nhất mùa hè tại Stadium Arena.",
       time: "18:00 - 01:00, ngày 15/07/2025",
       location: "Stadium Arena, TP.HCM",
-      price: "700.000", // Giá sự kiện
+      price: 0.028, // Equivalent to 700,000 VND
       image: "https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg",
       link: `/event/8`, // Link đi đến chi tiết sự kiện
     },
@@ -76,7 +75,7 @@ const Marketplace = () => {
                   <h3 className="text-lg font-semibold truncate">{event.title}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 flex-grow">{event.description.split('.')[0]}</p>
                   {/* Thêm giá vé */}
-                  <p className="text-lg font-semibold text-green-500 mt-2">{event.price} VND</p>
+                  <p className="text-lg font-semibold text-green-500 mt-2">{event.price.toFixed(6)} ETH</p>
 
                   {/* Nút Mua Vé */}
                   <button
