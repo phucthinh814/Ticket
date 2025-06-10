@@ -97,12 +97,10 @@ const router = createBrowserRouter([
       { path: '/history-ticket', element: <HistoryTicket /> },
       { path: '/transfer-ticket', element: <TransferTicket /> },
       { path: '/Market-Manager', element: <MarketplaceTicketManagement /> },
+      {path: '/search',element: <SearchPage />,},
     ],
   },
-  {
-    path: '/search',
-    element: <SearchPage />,
-  },
+
   {
     path: '/admin',
     element: (

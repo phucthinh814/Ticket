@@ -1,70 +1,70 @@
-import React, { useState } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import Dialog from '@mui/material/Dialog';
-import DialogActions from '@mui/material/DialogActions';
-import DialogContent from '@mui/material/DialogContent';
-import DialogTitle from '@mui/material/DialogTitle';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
+import React, { useState } from "react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import DialogTitle from "@mui/material/DialogTitle";
+import TextField from "@mui/material/TextField";
+import Button from "@mui/material/Button";
 
-// Sample ticket data
+// Sample ticket data with prices in ETH
 const Tickets = [
   {
-    id: 'TCK001',
-    eventName: 'Hòa nhạc Sơn Tùng M-TP',
-    ticketName: 'VIP',
-    price: 1500000,
-    purchaseDate: '2025-05-01',
-    location: 'Sân vận động Mỹ Đình, Hà Nội',
-    eventDate: '2025-06-15',
-    walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
-    tokenId: 'NFT001',
-    status: 'Chưa sử dụng',
+    id: "TCK001",
+    eventName: "Hòa nhạc Sơn Tùng M-TP",
+    ticketName: "VIP",
+    price: 0.06, // Converted from 1,500,000 VND at ~25,000,000 VND/ETH
+    purchaseDate: "2025-05-01",
+    location: "Sân vận động Mỹ Đình, Hà Nội",
+    eventDate: "2025-06-15",
+    walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
+    tokenId: "NFT001",
+    status: "Chưa sử dụng",
     isListed: false,
     listingPrice: null,
   },
   {
-    id: 'TCK002',
-    eventName: 'Lễ hội âm nhạc EDM',
-    ticketName: 'Thường',
-    price: 500000,
-    purchaseDate: '2025-04-20',
-    location: 'Quảng trường Ba Đình, Hà Nội',
-    eventDate: '2025-07-10',
-    walletAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
-    tokenId: 'NFT002',
-    status: 'Chưa sử dụng',
+    id: "TCK002",
+    eventName: "Lễ hội âm nhạc EDM",
+    ticketName: "Thường",
+    price: 0.02, // Converted from 500,000 VND
+    purchaseDate: "2025-04-20",
+    location: "Quảng trường Ba Đình, Hà Nội",
+    eventDate: "2025-07-10",
+    walletAddress: "0xabcdef1234567890abcdef1234567890abcdef12",
+    tokenId: "NFT002",
+    status: "Chưa sử dụng",
     isListed: true,
-    listingPrice: 0.024, // Equivalent to 600,000 VND at 0.00000004 ETH/VND
+    listingPrice: 0.024,
   },
   {
-    id: 'TCK003',
-    eventName: 'Triển lãm nghệ thuật',
-    ticketName: 'Premium',
-    price: 800000,
-    purchaseDate: '2025-03-15',
-    location: 'Bảo tàng Mỹ thuật TP.HCM',
-    eventDate: '2025-06-20',
-    walletAddress: '0x7890abcdef1234567890abcdef1234567890abcd',
-    tokenId: 'NFT003',
-    status: 'Đã sử dụng',
+    id: "TCK003",
+    eventName: "Triển lãm nghệ thuật",
+    ticketName: "Premium",
+    price: 0.032, // Converted from 800,000 VND
+    purchaseDate: "2025-03-15",
+    location: "Bảo tàng Mỹ thuật TP.HCM",
+    eventDate: "2025-06-20",
+    walletAddress: "0x7890abcdef1234567890abcdef1234567890abcd",
+    tokenId: "NFT003",
+    status: "Đã sử dụng",
     isListed: false,
     listingPrice: null,
   },
   {
-    id: 'TCK004',
-    eventName: 'Hội chợ công nghệ',
-    ticketName: 'Standard',
-    price: 300000,
-    purchaseDate: '2025-05-10',
-    location: 'SECC, TP.HCM',
-    eventDate: '2025-08-05',
-    walletAddress: '0x4567890abcdef1234567890abcdef1234567890',
-    tokenId: 'NFT004',
-    status: 'Chưa sử dụng',
+    id: "TCK004",
+    eventName: "Hội chợ công nghệ",
+    ticketName: "Standard",
+    price: 0.012, // Converted from 300,000 VND
+    purchaseDate: "2025-05-10",
+    location: "SECC, TP.HCM",
+    eventDate: "2025-08-05",
+    walletAddress: "0x4567890abcdef1234567890abcdef1234567890",
+    tokenId: "NFT004",
+    status: "Chưa sử dụng",
     isListed: false,
     listingPrice: null,
   },
@@ -75,7 +75,7 @@ const MarketplaceTicketManagement = () => {
   const [tickets, setTickets] = useState(Tickets);
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
-  const [sellPrice, setSellPrice] = useState('');
+  const [sellPrice, setSellPrice] = useState("");
   const ticketsPerPage = 4;
 
   // Calculate total pages
@@ -112,29 +112,36 @@ const MarketplaceTicketManagement = () => {
   // Pagination button class
   const getPageButtonClass = (number) => {
     return `px-3 py-1 mx-1 rounded-md transition-colors ${
-      currentPage === number ? 'bg-blue-500 text-white' : 'bg-gray-300 text-black hover:bg-gray-400'
+      currentPage === number
+        ? "bg-blue-500 text-white"
+        : "bg-gray-300 text-black hover:bg-gray-400"
     }`.trim();
   };
 
   // Format address for display
   const formatAddress = (address) => {
-    if (!address) return 'N/A';
+    if (!address) return "N/A";
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   // Format date for display
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+    return new Date(dateString).toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
+  };
+
+  // Format ETH price for display
+  const formatETH = (price) => {
+    return price ? `${Number(price).toFixed(6)} ETH` : "N/A";
   };
 
   // Handle sell ticket dialog open
   const handleSellTicket = (ticketId) => {
     setSelectedTicketId(ticketId);
-    setSellPrice('');
+    setSellPrice("");
     setOpenDialog(true);
   };
 
@@ -142,28 +149,36 @@ const MarketplaceTicketManagement = () => {
   const handleDialogClose = () => {
     setOpenDialog(false);
     setSelectedTicketId(null);
-    setSellPrice('');
+    setSellPrice("");
   };
 
   // Handle confirm sell
   const handleConfirmSell = () => {
     const price = Number(sellPrice);
     if (price && price > 0) {
-      setTickets(tickets.map((ticket) =>
-        ticket.id === selectedTicketId ? { ...ticket, isListed: true, listingPrice: price } : ticket
-      ));
+      setTickets(
+        tickets.map((ticket) =>
+          ticket.id === selectedTicketId
+            ? { ...ticket, isListed: true, listingPrice: price }
+            : ticket
+        )
+      );
       toast.success(`Vé ${selectedTicketId} đã được đăng bán với giá ${price.toFixed(6)} ETH`);
       handleDialogClose();
     } else {
-      toast.error('Giá bán không hợp lệ!');
+      toast.error("Giá bán không hợp lệ!");
     }
   };
 
   // Handle cancel sale
   const handleCancelSale = (ticketId) => {
-    setTickets(tickets.map((ticket) =>
-      ticket.id === ticketId ? { ...ticket, isListed: false, listingPrice: null } : ticket
-    ));
+    setTickets(
+      tickets.map((ticket) =>
+        ticket.id === ticketId
+          ? { ...ticket, isListed: false, listingPrice: null }
+          : ticket
+      )
+    );
     toast.success(`Hủy bán vé ${ticketId} thành công!`);
   };
 
@@ -186,7 +201,7 @@ const MarketplaceTicketManagement = () => {
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">ID</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Sự kiện</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Loại vé</th>
-              <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Giá mua (VND)</th>
+              <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Giá mua (ETH)</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Giá bán (ETH)</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Ngày mua</th>
               <th className="px-4 py-2 text-left text-black dark:text-white font-semibold">Địa điểm</th>
@@ -199,13 +214,16 @@ const MarketplaceTicketManagement = () => {
           </thead>
           <tbody>
             {currentTickets.map((ticket) => (
-              <tr key={ticket.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <tr
+                key={ticket.id}
+                className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
                 <td className="px-4 py-2 text-black dark:text-white">{ticket.id}</td>
                 <td className="px-4 py-2 text-black dark:text-white">{ticket.eventName}</td>
                 <td className="px-4 py-2 text-black dark:text-white">{ticket.ticketName}</td>
-                <td className="px-4 py-2 text-black dark:text-white">{ticket.price.toLocaleString('vi-VN')}</td>
+                <td className="px-4 py-2 text-black dark:text-white">{formatETH(ticket.price)}</td>
                 <td className="px-4 py-2 text-black dark:text-white">
-                  {ticket.isListed ? `${ticket.listingPrice.toFixed(6)} ETH` : 'Chưa đăng bán'}
+                  {ticket.isListed ? formatETH(ticket.listingPrice) : "Chưa đăng bán"}
                 </td>
                 <td className="px-4 py-2 text-black dark:text-white">{formatDate(ticket.purchaseDate)}</td>
                 <td className="px-4 py-2 text-black dark:text-white">{ticket.location}</td>
@@ -215,18 +233,18 @@ const MarketplaceTicketManagement = () => {
                 <td className="px-4 py-2">
                   <span
                     className={
-                      ticket.status === 'Chưa sử dụng'
-                        ? 'text-green-500'
-                        : ticket.status === 'Đã sử dụng'
-                        ? 'text-gray-500'
-                        : 'text-yellow-500'
+                      ticket.status === "Chưa sử dụng"
+                        ? "text-green-500"
+                        : ticket.status === "Đã sử dụng"
+                        ? "text-gray-500"
+                        : "text-yellow-500"
                     }
                   >
                     {ticket.status}
                   </span>
                 </td>
                 <td className="px-4 py-2">
-                  {ticket.status === 'Chưa sử dụng' && (
+                  {ticket.status === "Chưa sử dụng" && (
                     ticket.isListed ? (
                       <button
                         onClick={() => handleCancelSale(ticket.id)}
@@ -272,12 +290,12 @@ const MarketplaceTicketManagement = () => {
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Giá mua:</span>
-                <span className="text-black dark:text-white">{ticket.price.toLocaleString('vi-VN')} VND</span>
+                <span className="text-black dark:text-white">{formatETH(ticket.price)}</span>
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Giá bán:</span>
                 <span className="text-black dark:text-white">
-                  {ticket.isListed ? `${ticket.listingPrice.toFixed(6)} ETH` : 'Chưa đăng bán'}
+                  {ticket.isListed ? formatETH(ticket.listingPrice) : "Chưa đăng bán"}
                 </span>
               </div>
               <div className="flex">
@@ -304,11 +322,11 @@ const MarketplaceTicketManagement = () => {
                 <span className="font-semibold text-black dark:text-white w-28">Trạng thái:</span>
                 <span
                   className={
-                    ticket.status === 'Chưa sử dụng'
-                      ? 'text-green-500'
-                      : ticket.status === 'Đã sử dụng'
-                      ? 'text-gray-500'
-                      : 'text-yellow-500'
+                    ticket.status === "Chưa sử dụng"
+                      ? "text-green-500"
+                      : ticket.status === "Đã sử dụng"
+                      ? "text-gray-500"
+                      : "text-yellow-500"
                   }
                 >
                   {ticket.status}
@@ -316,7 +334,7 @@ const MarketplaceTicketManagement = () => {
               </div>
               <div className="flex">
                 <span className="font-semibold text-black dark:text-white w-28">Hành động:</span>
-                {ticket.status === 'Chưa sử dụng' && (
+                {ticket.status === "Chưa sử dụng" && (
                   ticket.isListed ? (
                     <button
                       onClick={() => handleCancelSale(ticket.id)}
@@ -386,7 +404,11 @@ const MarketplaceTicketManagement = () => {
           <Button onClick={handleDialogClose} color="secondary">
             Hủy
           </Button>
-          <Button onClick={handleConfirmSell} color="primary" disabled={!sellPrice || Number(sellPrice) <= 0}>
+          <Button
+            onClick={handleConfirmSell}
+            color="primary"
+            disabled={!sellPrice || Number(sellPrice) <= 0}
+          >
             Xác nhận
           </Button>
         </DialogActions>
