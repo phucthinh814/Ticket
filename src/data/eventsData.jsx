@@ -252,48 +252,48 @@ export const purchasedTickets = [
     eventId: 1,
     eventName: "ANH TRAI SAY HI CONCERT - ĐÊM 7", 
     ticketName: "SVIP A-1", 
-    price: 4000000, 
+    price: 0.01, 
     purchaseDate: "12/05/2025",
     status: "Chưa sử dụng",
     location: "Sân vận động Quốc gia Mỹ Đình, Hà Nội", 
     eventDate: "15/6/2025", 
-    walletAddress: "0xeAD1E36eD2C4163782C6F130D1e686E74a08Ab34",
+    walletAddress: "0xead1e36ed2c4163782c6f130d1e686e74a08ab34",
   },
   {
     id: 2,
     eventId: 2,
     eventName: "BABYMONSTER - HELLO MONSTERS", // Đổi từ eventTitle thành eventName
     ticketName: "VIP A", // Khớp với ticketTypes trong featuredEvents
-    price: 5000000, // Khớp với giá trong ticketTypes của sự kiện 2
+    price: 0.01, // Khớp với giá trong ticketTypes của sự kiện 2
     purchaseDate: "10/05/2025",
     status: "Đã sử dụng",
     location: "Trung tâm Hội nghị và Triển lãm Sài Gòn (SECC), TP.HCM", // Khớp với featuredEvents
     eventDate: "20/6/2025", // Lấy từ startTime: "20/6/2025 19:00"
-    walletAddress: "0xeAD1E36eD2C4163782C6F130D1e686E74a08Ab34",
+    walletAddress: "0xead1e36ed2c4163782c6f130d1e686e74a08ab34",
   },
   {
     id: 3,
     eventId: 3,
     eventName: "SỰ ĐỘT PHÁ THỜI TRANG", // Đổi từ eventTitle thành eventName
     ticketName: "General Admission", // Khớp với ticketTypes trong featuredEvents
-    price: 2000000, // Khớp với giá trong ticketTypes của sự kiện 3
+    price: 0.01, // Khớp với giá trong ticketTypes của sự kiện 3
     purchaseDate: "11/05/2025",
     status: "Chưa sử dụng",
     location: "Hà Nội", // Khớp với featuredEvents
     eventDate: "25/6/2025", // Lấy từ startTime: "25/6/2025 18:00"
-    walletAddress: "0x1234567890abcdef1234567890abcdef12345678",
+    walletAddress: "0xead1e36ed2c4163782c6f130d1e686e74a08ab34",
   },
   {
     id: 4,
     eventId: 5,
     eventName: "EDM NIGHT PARTY", // Đổi từ eventTitle thành eventName
     ticketName: "VIP A", // Khớp với ticketTypes trong featuredEvents
-    price: 5000000, // Khớp với giá trong ticketTypes của sự kiện 5
+    price: 0.01, // Khớp với giá trong ticketTypes của sự kiện 5
     purchaseDate: "12/05/2025",
     status: "Chưa sử dụng",
     location: "District 1 Nightclub, TP.HCM", // Khớp với featuredEvents
     eventDate: "5/7/2025", // Lấy từ startTime: "5/7/2025 22:00"
-    walletAddress: "0xabcdef1234567890abcdef1234567890abcdef12",
+    walletAddress: "0xead1e36ed2c4163782c6f130d1e686e74a08ab34",
   },
 ];
 export const transactions = [

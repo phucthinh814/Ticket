@@ -174,18 +174,27 @@ const EventDetail = () => {
 
         {/* Giới thiệu */}
         <div className="mt-8 bg-gray-100 dark:bg-gray-800 text-black dark:text-white p-6 rounded-xl shadow">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-lg font-semibold text-black dark:text-white">Giới thiệu</h3>
-            <button onClick={() => setShowDescription(!showDescription)} className="text-gray-700 dark:text-gray-300">
-              {showDescription ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </button>
-          </div>
-          {showDescription && (
-            <div className="mt-2 text-gray-700 dark:text-gray-300">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
-            </div>
-          )}
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-semibold text-black dark:text-white">Giới thiệu</h3>
+      </div>
+      <div
+        className={`overflow-hidden transition-all duration-500 ease-in-out ${
+          showDescription ? 'max-h-[1000px]' : 'max-h-16'
+        }`}
+      >
+        <div className="mt-2 text-gray-700 dark:text-gray-300">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
         </div>
+      </div>
+      <div className="flex justify-center mt-2">
+        <button
+          onClick={() => setShowDescription(!showDescription)}
+          className="text-gray-700 dark:text-gray-300 focus:outline-none"
+        >
+          {showDescription ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+        </button>
+      </div>
+    </div>
 
         {/* Thông tin vé */}
         <div className="mt-8 bg-gray-900 dark:bg-gray-800 text-white p-6 rounded-xl shadow">

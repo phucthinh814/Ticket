@@ -8,12 +8,14 @@ import logoDarkMode from '../assets/logo_darkmode.png';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import PersonIcon from '@mui/icons-material/Person';
 import HistoryIcon from '@mui/icons-material/History';
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import Brightness4Icon from '@mui/icons-material/Brightness4'; // Icon cho dark mode
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -182,14 +184,14 @@ const Header = () => {
                     </Link>
                     <Link to="/history-ticket" onClick={() => setShowDropdown(false)}>
                       <div className="px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm flex items-center gap-2">
-                        <HistoryIcon fontSize="small" className="text-gray-600 dark:text-gray-300" />
-                        Lịch sử mua vé
+                        <ConfirmationNumberIcon fontSize="small" className="text-gray-600 dark:text-gray-300" />
+                        Vé Đang Sở Hữu
                       </div>
                     </Link>
                     <Link to="/transfer-ticket" onClick={() => setShowDropdown(false)}>
                       <div className="px-3 sm:px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm flex items-center gap-2">
-                        <SwapHorizIcon fontSize="small" className="text-gray-600 dark:text-gray-300" />
-                        Chuyển nhượng vé
+                        <CardGiftcardIcon fontSize="small" className="text-gray-600 dark:text-gray-300" />
+                        Tặng vé
                       </div>
                     </Link>
                     <div
