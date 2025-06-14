@@ -22,10 +22,11 @@ import 'react-toastify/dist/ReactToastify.css';
 import { motion } from 'framer-motion';
 import { WalletContext } from '../context/WalletContext';
 import { ThemeContext } from '../context/ThemeContext'; // Đường dẫn tới ThemeContext
+import SearchBar from './SearchBar'; // Import the new SearchBar component
 
 const Header = () => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  // const [isFocused, setIsFocused] = useState(false);
+  // const [searchTerm, setSearchTerm] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isBalanceVisible, setIsBalanceVisible] = useState(false);
@@ -33,19 +34,19 @@ const Header = () => {
     useContext(WalletContext);
  const { isDarkMode, toggleTheme } = useContext(ThemeContext);
 
-  // Danh sách từ khóa gợi ý
-  const suggestions = [
-    'Nhạc sống Hà Nội',
-    'Vé concert BlackPink',
-    'Sân khấu kịch',
-    'Trận bóng đá Việt Nam',
-    'Sự kiện triển lãm nghệ thuật',
-  ];
+  // // Danh sách từ khóa gợi ý
+  // const suggestions = [
+  //   'Nhạc sống Hà Nội',
+  //   'Vé concert BlackPink',
+  //   'Sân khấu kịch',
+  //   'Trận bóng đá Việt Nam',
+  //   'Sự kiện triển lãm nghệ thuật',
+  // ];
 
   // Lọc gợi ý dựa trên từ khóa tìm kiếm
-  const filteredSuggestions = suggestions.filter((suggestion) =>
-    suggestion.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // const filteredSuggestions = suggestions.filter((suggestion) =>
+  //   suggestion.toLowerCase().includes(searchTerm.toLowerCase())
+  // );
 
   // Toggle menu hamburger
   const toggleMenu = () => {
@@ -78,55 +79,7 @@ const Header = () => {
             </Link>
             <div className="flex items-center space-x-2 sm:space-x-4">
               {/* Thanh tìm kiếm trên desktop, icon trên mobile */}
-              <div className="flex items-center">
-                <div className="hidden md:flex relative">
-                  <Link to="/search">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">
-                      <SearchIcon style={{ fontSize: 20 }} />
-                    </span>
-                  </Link>
-                  <input
-                    type="text"
-                    placeholder="Bạn tìm gì hôm nay?"
-                    className="pl-10 pr-4 py-2 rounded-l-md text-black dark:text-white w-48 sm:w-56 md:w-64 focus:outline-none border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-                  />
-                  {isFocused && filteredSuggestions.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute top-full left-0 mt-1 w-48 sm:w-56 md:w-64 bg-white dark:bg-gray-800 text-black dark:text-white rounded-md shadow-lg z-30"
-                    >
-                      {filteredSuggestions.map((suggestion, index) => (
-                        <div
-                          key={index}
-                          className="px-4 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
-                          onMouseDown={() => {
-                            setSearchTerm(suggestion);
-                            setIsFocused(false);
-                          }}
-                        >
-                          {suggestion}
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
-                    <Link to="/search">
-                  <button className="bg-white text-black dark:text-black border border-gray-300 dark:border-gray-600 px-3 py-2 rounded-r-md hover:bg-gray-300 dark:hover:bg-gray-300 font-semibold text-sm md:px-4">
-                    Tìm kiếm
-                  </button>
-                  </Link>
-                </div>
-                <Link to="/search">
-                  <button className="md:hidden flex items-center justify-center w-10 h-11 rounded-full bg-white dark:bg-gray-800 text-green-500 dark:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700">
-                    <SearchIcon style={{ fontSize: 24 }} />
-                  </button>
-                </Link>
-              </div>
+               <SearchBar />
                {/* Nút toggle dark mode */}
               <button
                 onClick={toggleTheme}

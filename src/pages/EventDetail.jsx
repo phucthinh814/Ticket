@@ -5,6 +5,7 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import EventIcon from '@mui/icons-material/Event'; // Thêm biểu tượng cho trạng thái
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -54,6 +55,7 @@ const EventDetail = () => {
           location: eventData.location,
           startTime: eventData.dateStart,
           endTime: eventData.dateEnd,
+          status: eventData.status, // Thêm trường status
           organizers: [
             {
               name: eventData.organizerName,
@@ -86,6 +88,14 @@ const EventDetail = () => {
 
   // Handle "Mua vé ngay" button
   const handleBuyTicket = async () => {
+    if (event.status !== 'UPCOMING') {
+      toast.error('Sự kiện đã kết thúc hoặc bị hủy, không thể mua vé!', {
+        position: 'top-center',
+        autoClose: 2000,
+      });
+      return;
+    }
+
     const isActuallyConnected = await checkConnectionStatus();
     if (!isActuallyConnected) {
       toast.warning('Vui lòng kết nối ví MetaMask để mua vé!', {
@@ -117,6 +127,20 @@ const EventDetail = () => {
     return `${startTime} - ${endTime}, ngày ${date}`;
   };
 
+  // Format status display
+  const formatStatus = () => {
+    switch (event?.status) {
+      case 'UPCOMING':
+        return <span className="text-green-400 font-semibold">Sắp diễn ra</span>;
+      case 'COMPLETED':
+        return <span className="text-gray-400 font-semibold">Đã kết thúc</span>;
+      case 'CANCELLED':
+        return <span className="text-red-400 font-semibold">Đã hủy</span>;
+      default:
+        return <span className="text-gray-400 font-semibold">Không xác định</span>;
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-black min-h-screen flex items-center justify-center text-black dark:text-white">
@@ -132,6 +156,8 @@ const EventDetail = () => {
       </div>
     );
   }
+
+  const isBuyButtonDisabled = event.status !== 'UPCOMING';
 
   return (
     <div className="bg-white dark:bg-black text-white min-h-screen">
@@ -159,11 +185,19 @@ const EventDetail = () => {
                 <p className="flex items-center gap-2">
                   <LocationOnIcon fontSize="small" className="text-green-400" /> {event.location}
                 </p>
+                <p className="flex items-center gap-2">
+                  <EventIcon fontSize="small" className="text-green-400" /> Trạng thái: {formatStatus()}
+                </p>
               </div>
               <div className="mt-6">
                 <button
                   onClick={handleBuyTicket}
-                  className="mt-4 inline-block bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 font-semibold w-full text-center"
+                  disabled={isBuyButtonDisabled}
+                  className={`mt-4 inline-block px-6 py-2 rounded-lg font-semibold w-full text-center ${
+                    isBuyButtonDisabled
+                      ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                      : 'bg-green-500 text-white hover:bg-green-600'
+                  }`}
                 >
                   Mua vé ngay
                 </button>
@@ -174,27 +208,27 @@ const EventDetail = () => {
 
         {/* Giới thiệu */}
         <div className="mt-8 bg-gray-100 dark:bg-gray-800 text-black dark:text-white p-6 rounded-xl shadow">
-      <div className="flex justify-between items-center mb-2">
-        <h3 className="text-lg font-semibold text-black dark:text-white">Giới thiệu</h3>
-      </div>
-      <div
-        className={`overflow-hidden transition-all duration-500 ease-in-out ${
-          showDescription ? 'max-h-[1000px]' : 'max-h-16'
-        }`}
-      >
-        <div className="mt-2 text-gray-700 dark:text-gray-300">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-lg font-semibold text-black dark:text-white">Giới thiệu</h3>
+          </div>
+          <div
+            className={`overflow-hidden transition-all duration-500 ease-in-out ${
+              showDescription ? 'max-h-[1000px]' : 'max-h-16'
+            }`}
+          >
+            <div className="mt-2 text-gray-700 dark:text-gray-300">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{event.description}</ReactMarkdown>
+            </div>
+          </div>
+          <div className="flex justify-center mt-2">
+            <button
+              onClick={() => setShowDescription(!showDescription)}
+              className="text-gray-700 dark:text-gray-300 focus:outline-none"
+            >
+              {showDescription ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </button>
+          </div>
         </div>
-      </div>
-      <div className="flex justify-center mt-2">
-        <button
-          onClick={() => setShowDescription(!showDescription)}
-          className="text-gray-700 dark:text-gray-300 focus:outline-none"
-        >
-          {showDescription ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-        </button>
-      </div>
-    </div>
 
         {/* Thông tin vé */}
         <div className="mt-8 bg-gray-900 dark:bg-gray-800 text-white p-6 rounded-xl shadow">
@@ -202,7 +236,12 @@ const EventDetail = () => {
             <h3 className="text-lg font-semibold">Thông tin vé</h3>
             <button
               onClick={handleBuyTicket}
-              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              disabled={isBuyButtonDisabled}
+              className={`px-4 py-2 rounded font-semibold ${
+                isBuyButtonDisabled
+                  ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                  : 'bg-green-500 text-white hover:bg-green-600'
+              }`}
             >
               Mua vé ngay
             </button>

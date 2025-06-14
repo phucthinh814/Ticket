@@ -1,183 +1,278 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import SearchIcon from '@mui/icons-material/Search';
-import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import axios from 'axios';
 
 const SearchPage = () => {
+  const [allEvents, setAllEvents] = useState([]); // Lưu danh sách sự kiện gốc từ API
+  const [filteredEvents, setFilteredEvents] = useState([]);
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [organizerFilter, setOrganizerFilter] = useState('');
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showOrganizerDropdown, setShowOrganizerDropdown] = useState(false);
+  const [organizerOptions, setOrganizerOptions] = useState(['']);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [dateFilter, setDateFilter] = useState('Tất cả các ngày');
-  const [categoryFilter, setCategoryFilter] = useState('Bộ lọc');
+  const [searchParams] = useSearchParams();
 
-  const dateOptions = ['Tất cả các ngày', 'Hôm nay', 'Tuần này', 'Tháng này', 'Năm nay'];
-  const categoryOptions = ['Bộ lọc', 'Âm nhạc', 'Thể thao', 'Hội thảo', 'Khác'];
-  const events = [
-    {
-      id: 1,
-      title: 'ANH TRAI "SAY HI" CONCERT - ĐÊM 6',
-      price: '0.01',
-      date: '10 tháng 05, 2025',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${1}`, // Link to event detail
-    },
-    {
-      id: 2,
-      title: 'ANH TRAI "SAY HI" HÀ NỘI - CONCERT 3',
-      price: '0.01',
-      date: '07 tháng 12, 2024',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${2}`, // Link to event detail
-    },
-    {
-      id: 3,
-      title: 'ANH TRAI "SAY HI" CONCERT - ĐÊM 5',
-      price: '0.01',
-      date: '21 tháng 03, 2025',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${3}`, // Link to event detail
-    },
-    {
-      id: 4,
-      title: 'ANH TRAI "SAY HI" HÀ NỘI - CONCERT 4',
-      price: '0.01',
-      date: '09 tháng 12, 2024',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${4}`, // Link to event detail
-    },
-    {
-      id: 5,
-      title: 'SAY HI THÁNG 7 CỬU VÂN PHÚC WATER SHOW',
-      price: '0.01',
-      date: '27 tháng 07, 2024',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${5}`, // Link to event detail
-    },
-    {
-      id: 6,
-      title: 'AFTER-PARTY: 1900 SAY HELLO | SATURDAY 10:05.2025',
-      price: '0.01',
-      date: '10 tháng 05, 2025',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${6}`, // Link to event detail
-    },
-    {
-      id: 7,
-      title: 'Automotive Mobility Solutions Conference | CONCERTI ANH TRAI VUỐT NGẠN CHỐNG GAI DAYS, DAY6',
-      price: '0.01',
-      date: '19 tháng 06, 2025',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${7}`, // Link to event detail
-    },
-    {
-      id: 8,
-      title: 'CONCERTI ANH TRAI VUỐT NGẠN CHỐNG GAI DAYS, DAY6',
-      price: '0.01',
-      date: '14 tháng 06, 2025',
-      imageUrl: 'https://salt.tkbcdn.com/ts/ds/09/d0/56/447ece235bc06c77739ce59d98c820fd.jpg',
-      tags: ['Đã diễn ra'],
-      link: `/event/${8}`, // Link to event detail
-    },
+  // Cập nhật statusOptions để khớp với backend (@JsonValue trả về lowercase)
+  const statusOptions = [
+    { display: 'Tất cả trạng thái', value: '' },
+    { display: 'Sắp diễn ra', value: 'UPCOMING' },
+    { display: 'Đã kết thúc', value: 'COMPLETED' },
+    { display: 'Đã hủy', value: 'CANCELLED' },
   ];
+
+  // Lấy danh sách tên tổ chức từ API
+  useEffect(() => {
+    const fetchOrganizers = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/organizers/names');
+        setOrganizerOptions(['', ...response.data]);
+      } catch (error) {
+        console.error('Lỗi khi lấy danh sách tổ chức:', error);
+        setOrganizerOptions(['', 'Lululola', 'LiveNation', 'Other']);
+      }
+    };
+
+    fetchOrganizers();
+  }, []);
+
+  // Lấy danh sách sự kiện từ API dựa trên keyword
+  const fetchEvents = async (keyword = null) => {
+    setIsLoading(true);
+    try {
+      const params = {
+        keyword: keyword || null,
+      };
+      const response = await axios.get('http://localhost:8080/api/events/search', { params });
+      setAllEvents(response.data || []);
+    } catch (error) {
+      console.error('Lỗi khi lấy sự kiện:', error);
+      setAllEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Gọi API khi keyword thay đổi
+  useEffect(() => {
+    const keyword = searchParams.get('keyword') || null;
+    fetchEvents(keyword);
+  }, [searchParams]);
+
+  // Áp dụng bộ lọc client-side
+  useEffect(() => {
+    setIsLoading(true);
+    try {
+      let filtered = [...allEvents];
+
+      // Kiểm tra ngày hợp lệ
+      if (dateStart && dateEnd && new Date(dateStart) > new Date(dateEnd)) {
+        alert('Ngày bắt đầu không được lớn hơn ngày kết thúc');
+        setDateEnd('');
+        setFilteredEvents([]);
+        return;
+      }
+
+      // Bộ lọc ngày
+      if (dateStart && dateEnd) {
+        filtered = filtered.filter((event) => {
+          const eventDate = new Date(event.dateStart);
+          return eventDate >= new Date(dateStart) && eventDate <= new Date(dateEnd);
+        });
+      } else if (dateStart) {
+        filtered = filtered.filter((event) => {
+          const eventDate = new Date(event.dateStart);
+          return eventDate >= new Date(dateStart);
+        });
+      } else if (dateEnd) {
+        filtered = filtered.filter((event) => {
+          const eventDate = new Date(event.dateStart);
+          return eventDate <= new Date(dateEnd);
+        });
+      }
+
+      // Bộ lọc trạng thái
+      if (statusFilter) {
+        filtered = filtered.filter((event) => event.status === statusFilter);
+      }
+
+      // Bộ lọc tổ chức
+      if (organizerFilter) {
+        filtered = filtered.filter((event) => event.organizerName === organizerFilter);
+      }
+
+      setFilteredEvents(filtered);
+    } catch (error) {
+      console.error('Lỗi khi lọc sự kiện:', error);
+      setFilteredEvents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [allEvents, dateStart, dateEnd, statusFilter, organizerFilter]);
+
+  // Format date for display
+  const formatDate = (isoDate) => {
+    const date = new Date(isoDate);
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day} tháng ${month}, ${year}`;
+  };
+
+  // Cập nhật formatStatus để khớp với backend
+  const formatStatus = (status) => {
+    switch (status) {
+      case 'UPCOMING':
+        return <span className="text-green-400 font-semibold">Sắp diễn ra</span>;
+      case 'COMPLETED':
+        return <span className="text-gray-400 font-semibold">Đã kết thúc</span>;
+      case 'CANCELLED':
+        return <span className="text-red-400 font-semibold">Đã hủy</span>;
+      default:
+        return <span className="text-gray-400">Không xác định</span>;
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-black min-h-screen text-black dark:text-white">
-
       {/* Filters Section */}
-<div className="flex items-center mb-4">
-      <div className="ml-auto mr-[120px] w-full max-w-6xl flex justify-end space-x-3">
-        <div className="relative">
-          <button
-            className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
-            onClick={() => setDateFilter(dateFilter === 'Tất cả các ngày' ? 'Hôm nay' : 'Tất cả các ngày')} // Toggle example
-          >
-            <CalendarTodayIcon style={{ fontSize: 20 }} />
-            <span>{dateFilter}</span>
-            <span>▼</span>
-          </button>
-          {dateFilter !== 'Tất cả các ngày' && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10">
-              {dateOptions.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => setDateFilter(option)}
-                  className="w-full text-left px-4 py-2 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="relative">
-          <button
-            className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
-            onClick={() => setCategoryFilter(categoryFilter === 'Bộ lọc' ? 'Âm nhạc' : 'Bộ lọc')} // Toggle example
-          >
-            <FilterListIcon style={{ fontSize: 20 }} />
-            <span>{categoryFilter}</span>
-            <span>▼</span>
-          </button>
-          {categoryFilter !== 'Bộ lọc' && (
-            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10">
-              {categoryOptions.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => setCategoryFilter(option)}
-                  className="w-full text-left px-4 py-2 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-<section className="max-w-7xl mx-auto px-4 py-8">
-  {/* Event Listings */}
-  {events.length > 0 ? (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-      {events.map((event) => (
-        <div
-          key={event.id}
-          className="bg-white dark:bg-gray-800 text-black dark:text-white rounded-2xl overflow-hidden shadow-lg flex flex-col"
-        >
-          <div className="relative w-full h-48 flex-shrink-0">
-            <img
-              src={event.imageUrl}
-              alt={event.title}
-              className="w-full h-full object-cover rounded-t-2xl"
+      <div className="flex items-center mb-4">
+        <div className="ml-auto mr-[120px] w-full max-w-6xl flex justify-end space-x-3">
+          {/* Date Start Filter */}
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-1">Từ ngày</label>
+            <input
+              type="date"
+              value={dateStart}
+              onChange={(e) => setDateStart(e.target.value)}
+              className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
             />
           </div>
-          <div className="p-4 flex flex-col flex-grow">
-            <h3 className="text-lg font-semibold truncate">{event.title}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2 flex-grow">{event.date}</p>
-            <p className="text-lg font-semibold text-green-500 dark:text-green-400 mt-2">{event.price} ETH</p>
-            <span className="inline-block bg-orange-500 text-xs px-2 py-1 rounded-full text-white">{event.tags}</span>
-            <Link
-              to={event.link}
-              className="mt-2 inline-block bg-black dark:bg-gray-700 text-white rounded-xl px-4 py-2 hover:bg-gray-800 dark:hover:bg-gray-600 text-sm text-center font-semibold"
-            >
-              Xem chi tiết
-            </Link>
+          {/* Date End Filter */}
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-1">Đến ngày</label>
+            <input
+              type="date"
+              value={dateEnd}
+              onChange={(e) => setDateEnd(e.target.value)}
+              disabled={!dateStart}
+              className="bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
+            />
+          </div>
+          {/* Status Filter */}
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-1">Trạng thái</label>
+            <div className="relative">
+              <button
+                className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              >
+                <FilterListIcon style={{ fontSize: 20 }} />
+                <span>
+                  {statusOptions.find((opt) => opt.value === statusFilter)?.display || 'Trạng thái'}
+                </span>
+                <span>▼</span>
+              </button>
+              {showStatusDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10">
+                  {statusOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setStatusFilter(option.value);
+                        setShowStatusDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      {option.display}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Organizer Filter */}
+          <div className="flex flex-col">
+            <label className="text-sm text-gray-600 dark:text-gray-400 mb-1">Ban tổ chức</label>
+            <div className="relative">
+              <button
+                className="flex items-center space-x-2 bg-gray-200 dark:bg-gray-700 text-black dark:text-white px-4 py-2 rounded-md"
+                onClick={() => setShowOrganizerDropdown(!showOrganizerDropdown)}
+              >
+                <FilterListIcon style={{ fontSize: 20 }} />
+                <span>{organizerFilter || 'Ban tổ chức'}</span>
+                <span>▼</span>
+              </button>
+              {showOrganizerDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-10">
+                  {organizerOptions.map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        setOrganizerFilter(option);
+                        setShowOrganizerDropdown(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      {option || 'Tất cả ban tổ chức'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      ))}
-    </div>
-  ) : (
-    <div className="text-center py-10 text-black dark:text-white">
-      <p className="text-xl font-semibold">Không tìm thấy sự kiện</p>
-    </div>
-  )}
-</section>
+      </div>
+
+      {/* Event Listings */}
+      <section className="max-w-7xl mx-auto px-4 py-8">
+        {isLoading ? (
+          <div className="text-center py-10">Đang tải...</div>
+        ) : filteredEvents.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {filteredEvents.map((event) => (
+              <div
+                key={event.eventId}
+                className="bg-white dark:bg-gray-800 text-black dark:text-white rounded-2xl overflow-hidden shadow-lg flex flex-col"
+              >
+                <div className="relative w-full h-48 flex-shrink-0">
+                  <img
+                    src={event.imageUrl || 'https://via.placeholder.com/150'}
+                    alt={event.eventName}
+                    className="w-full h-full object-cover rounded-t-2xl"
+                  />
+                </div>
+                <div className="p-4 flex flex-col flex-grow">
+                  <h3 className="text-lg font-semibold truncate">{event.eventName}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {formatDate(event.dateStart)}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {event.location}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    Trạng thái: {formatStatus(event.status)}
+                  </p>
+                  <Link
+                    to={`/event/${event.eventId}`}
+                    className="mt-3 inline-block bg-white dark:bg-gray-700 text-black dark:text-white px-3 py-1 rounded-xl text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-600"
+                  >
+                    Xem chi tiết
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10 text-black dark:text-white">
+            <p className="text-xl font-semibold">Không tìm thấy sự kiện</p>
+          </div>
+        )}
+      </section>
     </div>
   );
 };
