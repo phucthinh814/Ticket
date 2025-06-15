@@ -12,7 +12,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SpecialEvents from '../components/SpecialEvents';
-import { featuredEvents, locations } from '../data/eventsData';
+import { locations } from '../data/eventsData';
 import { WalletContext } from '../context/WalletContext';
 import { ThemeContext } from '../context/ThemeContext';
 import 'easymde/dist/easymde.min.css'; // Import SimpleMDE CSS for consistency
@@ -60,7 +60,7 @@ const EventDetail = () => {
             {
               name: eventData.organizerName,
               logo: eventData.logo || 'https://via.placeholder.com/100x100?text=Organizer+Logo',
-              description: 'Ban tổ chức sự kiện âm nhạc và công nghệ hàng đầu.',
+              description: eventData.organizerDescription,
             },
           ],
         };
@@ -169,7 +169,7 @@ const EventDetail = () => {
               <img
                 src={event.image}
                 alt={event.name}
-                className="w-full h-[400px] object-cover rounded-lg"
+                className="w-full h-auto max-h-[400px] object-contain rounded-lg"
                 onError={(e) => {
                   console.error('Image failed to load:', event.image);
                   e.target.src = 'https://via.placeholder.com/300x480?text=Fallback+Image';
@@ -205,6 +205,7 @@ const EventDetail = () => {
             </div>
           </div>
         </div>
+
 
         {/* Giới thiệu */}
         <div className="mt-8 bg-gray-100 dark:bg-gray-800 text-black dark:text-white p-6 rounded-xl shadow">
@@ -314,7 +315,7 @@ const EventDetail = () => {
         </div>
 
         {/* Sự kiện nổi bật */}
-        <SpecialEvents events={featuredEvents} />
+        <SpecialEvents/>
 
         {/* Điểm đến thú vị */}
         <section className="max-w-7xl text-black dark:text-white mx-auto px-4 py-8">

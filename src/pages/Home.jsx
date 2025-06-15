@@ -71,7 +71,7 @@ const Home = () => {
 
   return (
     <div className="bg-white dark:bg-black min-h-screen text-black dark:text-white">
-      {/* Sự kiện nổi bật */}
+     {/* Sự kiện nổi bật */}
       <section className="max-w-7xl mx-auto px-4 py-8">
         <h2 className="text-xl font-semibold mb-4 text-black dark:text-white">Sự kiện nổi bật</h2>
         <div className="relative">
@@ -79,24 +79,26 @@ const Home = () => {
             {currentEvents.map((event) => (
               <div
                 key={event.id}
-                className="bg-white dark:bg-gray-800 text-black dark:text-white rounded-2xl overflow-hidden shadow-xl h-[480px] w-full relative"
+                className="bg-white dark:bg-gray-800 text-black dark:text-white rounded-2xl overflow-hidden shadow-xl w-full relative h-[300px] md:h-[480px]"
               >
-                <div className="relative w-full h-full">
-                  <img
-                    src={event.image || 'https://via.placeholder.com/300x480?text=Fallback+Image'}
-                    alt={event.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      console.error('Image failed to load:', event.image);
-                      e.target.src = 'https://via.placeholder.com/300x480?text=Fallback+Image';
-                    }}
-                  />
-                  <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-60 text-white p-4">
-                    <h3 className="text-lg font-semibold truncate">{event.name}</h3>
-                    <p className="text-sm line-clamp-2 mt-1">{event.description.split('.')[0]}</p>
+                <div className="relative w-full h-full flex flex-col">
+                  <div className="w-full h-[200px] md:h-[380px] overflow-hidden">
+                    <img
+                      src={event.image || 'https://via.placeholder.com/300x480?text=Fallback+Image'}
+                      alt={event.name}
+                      className="w-full h-full object-cover object-center"
+                      onError={(e) => {
+                        console.error('Image failed to load:', event.image);
+                        e.target.src = 'https://via.placeholder.com/300x480?text=Fallback+Image';
+                      }}
+                    />
+                  </div>
+                  <div className="flex-1 bg-black bg-opacity-60 text-white p-2 md:p-4">
+                    <h3 className="text-base md:text-lg font-semibold truncate">{event.name}</h3>
+                    <p className="text-xs md:text-sm line-clamp-2 mt-0.5 md:mt-1">{event.description.split('.')[0]}</p>
                     <Link
                       to={`/event/${event.id}`}
-                      className="mt-3 inline-block bg-white dark:bg-gray-700 text-black dark:text-white px-3 py-1 rounded-xl text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-600"
+                      className="mt-1 md:mt-3 inline-block bg-white dark:bg-gray-700 text-black dark:text-white px-2 md:px-3 py-0.5 md:py-1 rounded-xl text-xs md:text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-600"
                     >
                       Xem chi tiết
                     </Link>
@@ -118,9 +120,8 @@ const Home = () => {
           </div>
         </div>
       </section>
-
       {/* Special Events */}
-      <SpecialEvents events={events} />
+      <SpecialEvents  />
 
       {/* Dành cho bạn */}
       <RecommendedEvents events={events} />

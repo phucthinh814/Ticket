@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { WalletContext } from '../context/WalletContext';
-import { QRCodeSVG } from 'qrcode.react'; // Use named import QRCodeSVG
+import { QRCodeSVG } from 'qrcode.react';
 
 const HistoryTicket = () => {
   const { walletAddress } = useContext(WalletContext);
@@ -10,7 +10,6 @@ const HistoryTicket = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Hàm toggle dropdown cho từng vé
   const toggleDropdown = (ticketId) => {
     setOpenDropdowns((prev) => ({
       ...prev,
@@ -18,7 +17,6 @@ const HistoryTicket = () => {
     }));
   };
 
-  // Hàm gọi API để lấy lịch sử vé
   const fetchTickets = async () => {
     if (!walletAddress) {
       setUserTickets([]);
@@ -42,7 +40,7 @@ const HistoryTicket = () => {
 
       const data = await response.json();
       console.log('Dữ liệu phản hồi từ API:', data);
-      setUserTickets(Array.isArray(data) ? data : [data]); // Đảm bảo dữ liệu là mảng
+      setUserTickets(Array.isArray(data) ? data : [data]);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -50,12 +48,10 @@ const HistoryTicket = () => {
     }
   };
 
-  // Gọi API khi walletAddress thay đổi
   useEffect(() => {
     fetchTickets();
   }, [walletAddress]);
 
-  // Hàm định dạng ngày theo múi giờ Việt Nam
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleString('vi-VN', {
       timeZone: 'Asia/Ho_Chi_Minh',
@@ -67,7 +63,6 @@ const HistoryTicket = () => {
     });
   };
 
-  // Hàm định dạng trạng thái
   const formatStatus = (status) => {
     return status === 'OWNED' ? 'Chưa sử dụng' : 'Đã sử dụng';
   };
@@ -87,42 +82,43 @@ const HistoryTicket = () => {
           </p>
         ) : (
           <div className="grid gap-6">
-            {userTickets.slice().reverse().map((ticket) => ( // Reverse the ticket list
+            {userTickets.slice().reverse().map((ticket) => (
               <div
                 key={ticket.ticketId}
-                className="bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-lg transition-shadow flex flex-row items-start gap-4"
+                className="bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-lg transition-shadow flex flex-col sm:flex-row sm:items-start gap-4"
               >
-                {/* Hình ảnh sự kiện bên trái */}
+                {/* Hình ảnh sự kiện */}
                 {ticket.imageUrl && (
-                  <div className="w-1/4 flex-shrink-0">
+                  <div className="w-full sm:w-1/4 flex-shrink-0">
                     <img
                       src={ticket.imageUrl}
                       alt={ticket.eventName}
-                      className="w-full h-full object-cover rounded-md"
+                      className="w-full h-48 sm:h-full object-cover rounded-md"
                     />
                   </div>
                 )}
 
-                {/* Nội dung vé bên phải */}
-                <div className="flex-1">
-                  {/* Hàng đầu tiên: Tên sự kiện bên trái, trạng thái bên phải */}
-                  <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200"> Vé Của Sự Kiện {ticket.eventName}</h3>
-                    <p className="text-sm font-medium">
-                      <span className={ticket.status === 'OWNED' ? 'text-green-500' : 'text-red-500'}>
-                        {formatStatus(ticket.status)}
-                      </span>
-                    </p>
-                  </div>
-
-                  {/* Hàng thứ hai: Ngày mua và nút "Xem chi tiết" nằm ngang */}
-                  <div className="flex items-center gap-2 mt-1">
+                {/* Nội dung vé */}
+                <div className="flex-1 flex flex-col gap-2">
+                  {/* Tên sự kiện */}
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">
+                    Vé Của Sự Kiện {ticket.eventName}
+                  </h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       Ngày mua: {formatDate(ticket.purchaseDate)}
                     </p>
+                  {/* Trạng thái */}
+                  <p className="text-sm font-medium text-center sm:text-right">
+                    <span className={ticket.status === 'OWNED' ? 'text-green-500' : 'text-red-500'}>
+                      {formatStatus(ticket.status)}
+                    </span>
+                  </p>
+
+                  {/* Ngày mua và nút "Xem chi tiết" */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <button
                       onClick={() => toggleDropdown(ticket.ticketId)}
-                      className="ml-auto bg-green-500 text-white px-2 py-1 rounded-md hover:bg-green-600 focus:outline-none text-xs"
+                      className="sm:ml-auto bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 focus:outline-none text-sm"
                     >
                       {openDropdowns[ticket.ticketId] ? 'Ẩn chi tiết' : 'Xem chi tiết'}
                     </button>
@@ -152,7 +148,6 @@ const HistoryTicket = () => {
                       <p>Loại vé: {ticket.ticketName}</p>
                       <p>Giá: {ticket.price} ETH</p>
                       <p>Token ID: {ticket.tokenId}</p>
-                      {/* <p>Transaction Hash: {ticket.txHash || 'Không có'}</p> */}
                       <p>Ngày sự kiện: {formatDate(ticket.eventDate)}</p>
                       <p>Địa điểm: {ticket.location}</p>
                     </motion.div>

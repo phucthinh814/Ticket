@@ -1,12 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowBackIos, ArrowForwardIos } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const SpecialEvents = ({ events }) => {
-  // const { isDarkMode } = useContext(ThemeContext);
+const SpecialEvents = () => {
+  const [events, setEvents] = useState([]);
   const eventsPerPage = 4;
   const [currentPage, setCurrentPage] = useState(0);
+
+  // Fetch events from API
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/events');
+        if (!response.ok) {
+          throw new Error('Failed to fetch events');
+        }
+        const data = await response.json();
+        // Map API data to match expected structure
+        const mappedEvents = data
+          .map(event => ({
+            id: event.event_id,
+            title: event.event_name, // Changed 'name' to 'title' to match rendering
+            description: event.description,
+            image: event.image_url,
+            location: event.location,
+            date_start: event.date_start,
+            date_end: event.date_end,
+            status: event.status,
+          }))
+          .reverse(); // Reverse the array after mapping
+        setEvents(mappedEvents);
+      } catch (err) {
+        console.error('Error fetching events:', err);
+      }
+    };
+
+    fetchEvents();
+  }, []);
 
   const totalPages = Math.ceil(events.length / eventsPerPage);
 
@@ -62,7 +93,7 @@ const SpecialEvents = ({ events }) => {
                   <div className="relative w-full h-48 flex-shrink-0">
                     <img
                       src={event.image}
-                      alt={event.name}
+                      alt={event.title} // Changed 'name' to 'title' to match mapping
                       className="w-full h-full object-cover rounded-t-2xl"
                     />
                   </div>
