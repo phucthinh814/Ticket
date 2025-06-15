@@ -87,7 +87,7 @@ const HistoryTicket = () => {
           </p>
         ) : (
           <div className="grid gap-6">
-            {userTickets.map((ticket) => (
+            {userTickets.slice().reverse().map((ticket) => ( // Reverse the ticket list
               <div
                 key={ticket.ticketId}
                 className="bg-white dark:bg-gray-800 rounded-lg p-4 hover:shadow-lg transition-shadow flex flex-row items-start gap-4"
@@ -137,7 +137,7 @@ const HistoryTicket = () => {
                       transition={{ duration: 0.3 }}
                       className="mt-2 text-gray-600 dark:text-gray-400 text-sm"
                     >
-                    {ticket.txHash && (
+                      {ticket.txHash && (
                         <div className="mt-2">
                           <p className="text-sm font-medium">Mã QR Vé</p>
                           <QRCodeSVG
@@ -153,7 +153,6 @@ const HistoryTicket = () => {
                       <p>Giá: {ticket.price} ETH</p>
                       <p>Token ID: {ticket.tokenId}</p>
                       {/* <p>Transaction Hash: {ticket.txHash || 'Không có'}</p> */}
-                      
                       <p>Ngày sự kiện: {formatDate(ticket.eventDate)}</p>
                       <p>Địa điểm: {ticket.location}</p>
                     </motion.div>

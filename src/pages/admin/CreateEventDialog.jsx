@@ -30,6 +30,9 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     benefits: [''],
   });
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+  const [organizers, setOrganizers] = useState([]);
+  const [selectedOrganizerId, setSelectedOrganizerId] = useState('');
+  const [isCreatingNewOrganizer, setIsCreatingNewOrganizer] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [logoPreview, setLogoPreview] = useState('');
@@ -46,6 +49,20 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
       console.error('Lỗi: VITE_PINATA_JWT không được định nghĩa trong .env.');
       setError('Cấu hình Pinata không hợp lệ. Vui lòng kiểm tra file .env.');
     }
+  }, []);
+
+  // Fetch organizers from API
+  useEffect(() => {
+    const fetchOrganizers = async () => {
+      try {
+        const response = await axios.get('http://localhost:8080/api/organizers/list');
+        setOrganizers(response.data);
+      } catch (err) {
+        console.error('Lỗi khi lấy danh sách nhà tổ chức:', err);
+        setError('Không thể lấy danh sách nhà tổ chức');
+      }
+    };
+    fetchOrganizers();
   }, []);
 
   // Format date
@@ -93,7 +110,7 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
       setEventImagePreview(URL.createObjectURL(file));
     }
   };
-  
+
   // Handle file selection for event ticket
   const handleTicketImageChange = (e) => {
     const file = e.target.files[0];
@@ -109,6 +126,44 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
       setTicketData({ ...ticketData, image: file });
       setTicketImagePreview(URL.createObjectURL(file));
     }
+  };
+
+  // Handle organizer selection from combobox
+  const handleOrganizerSelect = (e) => {
+    const organizerId = e.target.value;
+    setSelectedOrganizerId(organizerId);
+    setIsCreatingNewOrganizer(false);
+    if (organizerId) {
+      const selectedOrg = organizers.find((org) => org.organizerId === parseInt(organizerId));
+      if (selectedOrg) {
+        setEventData((prev) => ({
+          ...prev,
+          organizer: {
+            name: selectedOrg.name,
+            logo: selectedOrg.logo, // Store URL instead of file
+            description: selectedOrg.description,
+          },
+        }));
+        setLogoPreview(selectedOrg.logo);
+      }
+    } else {
+      setEventData((prev) => ({
+        ...prev,
+        organizer: { name: '', logo: null, description: '' },
+      }));
+      setLogoPreview('');
+    }
+  };
+
+  // Handle "Create New Organizer" button click
+  const handleCreateNewOrganizerClick = () => {
+    setIsCreatingNewOrganizer(true);
+    setSelectedOrganizerId('');
+    setEventData((prev) => ({
+      ...prev,
+      organizer: { name: '', logo: null, description: '' },
+    }));
+    setLogoPreview('');
   };
 
   // Upload file and metadata to Pinata
@@ -229,24 +284,6 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     }));
   };
 
-  // // Handle updating ticket image
-  // const handleUpdateTicketImage = (index, e) => {
-  //   const file = e.target.files[0];
-  //   if (file) {
-  //     if (file.size > 10 * 1024 * 1024) {
-  //       setError('Kích thước ảnh vé không được vượt quá 10MB');
-  //       return;
-  //     }
-  //     if (!['image/png', 'image/jpeg', 'image/jpg'].includes(file.type)) {
-  //       setError('Chỉ hỗ trợ định dạng PNG, JPEG, hoặc JPG');
-  //       return;
-  //     }
-  //     const updatedTickets = [...eventData.ticketTypes];
-  //     updatedTickets[index] = { ...updatedTickets[index], image: file };
-  //     setEventData({ ...eventData, ticketTypes: updatedTickets });
-  //   }
-  // };
-
   // Handle updating benefit
   const handleUpdateBenefit = (index, benefitIndex, value) => {
     const updatedTickets = [...eventData.ticketTypes];
@@ -254,54 +291,39 @@ const CreateEventDialog = ({ isOpen, onClose, onEventCreated }) => {
     setEventData({ ...eventData, ticketTypes: updatedTickets });
   };
 
-  // // Handle adding benefit
-  // const handleAddBenefit = (index) => {
-  //   const updatedTickets = [...eventData.ticketTypes];
-  //   updatedTickets[index].benefits = [...updatedTickets[index].benefits, ''];
-  //   setEventData({ ...eventData, ticketTypes: updatedTickets });
-  // };
-
-  // // Handle removing benefit
-  // const handleRemoveBenefit = (index, benefitIndex) => {
-  //   const updatedTickets = [...eventData.ticketTypes];
-  //   updatedTickets[index].benefits = updatedTickets[index].benefits.filter((_, i) => i !== benefitIndex);
-  //   setEventData({ ...eventData, ticketTypes: updatedTickets });
-  // };
-const handleCancel = () => {
-  // Reset all state to initial values
-  setEventData({
-    organizer: { name: '', logo: null, description: '' },
-    event: {
+  const handleCancel = () => {
+    setEventData({
+      organizer: { name: '', logo: null, description: '' },
+      event: {
+        name: '',
+        location: '',
+        description: '',
+        image_url: null,
+        dateStart: null,
+        dateEnd: null,
+      },
+      ticketTypes: [],
+    });
+    setTicketData({
       name: '',
-      location: '',
-      description: '',
-      image_url: null,
-      dateStart: null,
-      dateEnd: null,
-    },
-    ticketTypes: [],
-  });
-  setTicketData({
-    name: '',
-    price: '',
-    amount: '',
-    metadataURI: '',
-    image: null,
-    benefits: [''],
-  });
-  setLogoPreview('');
-  setEventImagePreview('');
-  setTicketImagePreview('');
-  setError('');
-  
-  // Clear SimpleMDE editor content if it exists
-  if (simpleMdeRef.current) {
-    simpleMdeRef.current.value('');
-  }
-  
-  // Close the dialog
-  onClose();
-};
+      price: '',
+      amount: '',
+      metadataURI: '',
+      image: null,
+      benefits: [''],
+    });
+    setSelectedOrganizerId('');
+    setIsCreatingNewOrganizer(false);
+    setLogoPreview('');
+    setEventImagePreview('');
+    setTicketImagePreview('');
+    setError('');
+    if (simpleMdeRef.current) {
+      simpleMdeRef.current.value('');
+    }
+    onClose();
+  };
+
   // Handle saving event to API
   const handleSaveEvent = async () => {
     if (
@@ -332,7 +354,9 @@ const handleCancel = () => {
       let logoUrl = '';
       let eventImageUrl = '';
       try {
-        logoUrl = eventData.organizer.logo ? await uploadToPinata(eventData.organizer.logo) : '';
+        logoUrl = eventData.organizer.logo && typeof eventData.organizer.logo !== 'string'
+          ? await uploadToPinata(eventData.organizer.logo)
+          : eventData.organizer.logo || '';
         eventImageUrl = eventData.event.image_url ? await uploadToPinata(eventData.event.image_url) : '';
       } catch (uploadError) {
         console.warn('Tải ảnh lên Pinata thất bại, tiếp tục tạo sự kiện:', uploadError.message);
@@ -375,16 +399,7 @@ const handleCancel = () => {
       });
 
       onEventCreated(payload);
-
-      setEventData({
-        organizer: { name: '', logo: null, description: '' },
-        event: { name: '', location: '', description: '', image_url: null, dateStart: null, dateEnd: null },
-        ticketTypes: [],
-      });
-      setLogoPreview('');
-      setEventImagePreview('');
-      setError('');
-      onClose();
+      handleCancel();
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message;
       setError(`Không thể tạo sự kiện: ${errorMessage}`);
@@ -401,41 +416,29 @@ const handleCancel = () => {
     }
   };
 
-const validateDates = (currentDate, isStartDate) => {
-  const current = moment.tz(currentDate, 'Asia/Ho_Chi_Minh');
-  
-  if (isStartDate && eventData.event.dateEnd) {
-    // Khi chọn ngày bắt đầu, không cần giới hạn ngày dựa trên ngày kết thúc
-    // Có thể thêm logic nếu bạn muốn không cho chọn ngày trong quá khứ
+  const validateDates = (currentDate, isStartDate) => {
+    const current = moment.tz(currentDate, 'Asia/Ho_Chi_Minh');
+    if (isStartDate && eventData.event.dateEnd) {
+      return true;
+    }
+    if (!isStartDate && eventData.event.dateStart) {
+      const startDate = moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh');
+      return current.isSameOrAfter(startDate, 'day');
+    }
     return true;
-  }
-  
-  if (!isStartDate && eventData.event.dateStart) {
-    const startDate = moment.tz(eventData.event.dateStart, 'Asia/Ho_Chi_Minh');
-    // Vô hiệu hóa các ngày trước ngày bắt đầu (ví dụ: trước 28/06/2025)
-    return current.isSameOrAfter(startDate, 'day');
-  }
-  
-  return true;
-};
+  };
+
   // Debounced update for SimpleMDE description
   const updateDescription = debounce((value) => {
-    setEventData((prev) => {
-      console.log('Cập nhật description:', value);
-      console.log('Trạng thái trước:', prev);
-      const newState = {
-        ...prev,
-        event: { ...prev.event, description: value },
-      };
-      console.log('Trạng thái sau:', newState);
-      return newState;
-    });
+    setEventData((prev) => ({
+      ...prev,
+      event: { ...prev.event, description: value },
+    }));
   }, 300);
 
   // Initialize SimpleMDE for event description
   useEffect(() => {
     if (isOpen && textareaRef.current && !simpleMdeRef.current) {
-      console.log('Khởi tạo SimpleMDE');
       simpleMdeRef.current = new SimpleMDE({
         element: textareaRef.current,
         spellChecker: false,
@@ -459,10 +462,7 @@ const validateDates = (currentDate, isStartDate) => {
         ],
       });
 
-      // Set initial value
       simpleMdeRef.current.value(eventData.event.description || '');
-
-      // Attach change event with debounced update
       simpleMdeRef.current.codemirror.on('change', () => {
         updateDescription(simpleMdeRef.current.value());
       });
@@ -470,7 +470,6 @@ const validateDates = (currentDate, isStartDate) => {
 
     return () => {
       if (simpleMdeRef.current) {
-        console.log('Dọn dẹp SimpleMDE');
         simpleMdeRef.current.toTextArea();
         simpleMdeRef.current = null;
       }
@@ -481,6 +480,18 @@ const validateDates = (currentDate, isStartDate) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <style>
+        {`
+          .editor-preview img,
+          .CodeMirror-preview img {
+            max-width: 100%;
+            width: 500px;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+          }
+        `}
+      </style>
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h3 className="text-xl font-bold text-black dark:text-white mb-4">Tạo sự kiện mới</h3>
         {error && <p className="text-red-500 mb-4">{error}</p>}
@@ -505,42 +516,80 @@ const validateDates = (currentDate, isStartDate) => {
         <div className="space-y-4">
           {/* Organizer Information */}
           <h4 className="text-lg font-semibold text-black dark:text-white">Thông tin đơn vị tổ chức</h4>
-          <input
-            type="text"
-            placeholder="Tên đơn vị tổ chức"
-            value={eventData.organizer.name}
-            onChange={(e) =>
-              setEventData((prev) => ({
-                ...prev,
-                organizer: { ...prev.organizer, name: e.target.value },
-              }))
-            }
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
-            disabled={isLoading}
-          />
-          <div className="flex flex-col space-y-2">
-            <label className="text-black dark:text-white text-sm sm:text-base">Logo đơn vị tổ chức</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleLogoChange}
-              className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
+          <div className="flex flex-col sm:flex-row sm:space-x-4">
+            <select
+              value={selectedOrganizerId}
+              onChange={handleOrganizerSelect}
+              className="w-full sm:w-1/2 p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
               disabled={isLoading}
-            />
-            {logoPreview && <img src={logoPreview} alt="Logo Preview" className="mt-2 h-24 w-24 object-cover rounded" />}
+            >
+              <option value="">Chọn nhà tổ chức</option>
+              {organizers.map((org) => (
+                <option key={org.organizerId} value={org.organizerId}>
+                  {org.name}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleCreateNewOrganizerClick}
+              className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm sm:text-base disabled:opacity-50"
+              disabled={isLoading}
+            >
+              Tạo nhà tổ chức mới
+            </button>
           </div>
-          <textarea
-            placeholder="Mô tả đơn vị tổ chức"
-            value={eventData.organizer.description}
-            onChange={(e) =>
-              setEventData((prev) => ({
-                ...prev,
-                organizer: { ...prev.organizer, description: e.target.value },
-              }))
-            }
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
-            disabled={isLoading}
-          />
+          {isCreatingNewOrganizer && (
+            <>
+              <input
+                type="text"
+                placeholder="Tên đơn vị tổ chức"
+                value={eventData.organizer.name}
+                onChange={(e) =>
+                  setEventData((prev) => ({
+                    ...prev,
+                    organizer: { ...prev.organizer, name: e.target.value },
+                  }))
+                }
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
+                disabled={isLoading}
+              />
+              <div className="flex flex-col space-y-2">
+                <label className="text-black dark:text-white text-sm sm:text-base">Logo đơn vị tổ chức</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoChange}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
+                  disabled={isLoading}
+                />
+                {logoPreview && (
+                  <img src={logoPreview} alt="Logo Preview" className="mt-2 h-24 w-24 object-cover rounded" />
+                )}
+              </div>
+              <textarea
+                placeholder="Mô tả đơn vị tổ chức"
+                value={eventData.organizer.description}
+                onChange={(e) =>
+                  setEventData((prev) => ({
+                    ...prev,
+                    organizer: { ...prev.organizer, description: e.target.value },
+                  }))
+                }
+                className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
+                disabled={isLoading}
+              />
+            </>
+          )}
+          {selectedOrganizerId && !isCreatingNewOrganizer && (
+            <div className="mt-4 p-4 border rounded bg-gray-100 dark:bg-gray-700">
+              <h5 className="text-md font-semibold text-black dark:text-white">Thông tin nhà tổ chức đã chọn</h5>
+              <p><strong>Tên:</strong> {eventData.organizer.name}</p>
+              <p><strong>Mô tả:</strong> {eventData.organizer.description}</p>
+              {logoPreview && (
+                <img src={logoPreview} alt="Logo Preview" className="mt-2 h-24 w-24 object-cover rounded" />
+              )}
+            </div>
+          )}
 
           {/* Event Information */}
           <h4 className="text-lg font-semibold text-black dark:text-white">Thông tin sự kiện</h4>
@@ -717,13 +766,6 @@ const validateDates = (currentDate, isStartDate) => {
                     />
                     <div className="flex flex-col space-y-1">
                       <label className="text-black dark:text-white text-sm sm:text-base">Hình ảnh vé</label>
-                      {/* <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleUpdateTicketImage(index, e)}
-                        className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
-                        disabled={isLoading}
-                      /> */}
                       {ticket.image && (
                         <img
                           src={URL.createObjectURL(ticket.image)}
@@ -746,22 +788,8 @@ const validateDates = (currentDate, isStartDate) => {
                             className="w-full sm:w-auto flex-1 p-2 border rounded dark:bg-gray-700 dark:text-white text-sm sm:text-base"
                             disabled={isLoading}
                           />
-                          {/* <button
-                            onClick={() => handleRemoveBenefit(index, benefitIndex)}
-                            className="w-full sm:w-auto px-4 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm sm:text-base disabled:opacity-50"
-                            disabled={isLoading}
-                          >
-                            Xóa
-                          </button> */}
                         </div>
                       ))}
-                      {/* <button
-                        onClick={() => handleAddBenefit(index)}
-                        className="w-full sm:w-auto px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm sm:text-base disabled:opacity-50"
-                        disabled={isLoading}
-                      >
-                        Thêm lợi ích
-                      </button> */}
                     </div>
                     <button
                       onClick={() => handleRemoveTicket(index)}
@@ -797,6 +825,7 @@ const validateDates = (currentDate, isStartDate) => {
         </div>
       </div>
 
+      {/* Ticket Dialog */}
       {isTicketDialogOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto">
@@ -884,19 +913,19 @@ const validateDates = (currentDate, isStartDate) => {
               </div>
               <div className="mt-4 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4">
                 <button
-                 onClick={() => {
-                  setTicketData({
-                    name: '',
-                    price: '',
-                    amount: '',
-                    metadataURI: '',
-                    image: null,
-                    benefits: [''],
-                  });
-                  setTicketImagePreview('');
-                  setError('');
-                  setIsTicketDialogOpen(false);
-                }}
+                  onClick={() => {
+                    setTicketData({
+                      name: '',
+                      price: '',
+                      amount: '',
+                      metadataURI: '',
+                      image: null,
+                      benefits: [''],
+                    });
+                    setTicketImagePreview('');
+                    setError('');
+                    setIsTicketDialogOpen(false);
+                  }}
                   className="w-full sm:w-auto px-4 py-2 bg-gray-300 text-black rounded-md hover:bg-gray-400 text-sm sm:text-base disabled:opacity-50"
                   disabled={isLoading}
                 >
